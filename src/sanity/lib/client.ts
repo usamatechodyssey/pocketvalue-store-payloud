@@ -22,7 +22,7 @@ export const client: SanityClient = createClient({
   // No token is provided, making this a read-only client.
   
   useCdn: false,  // <-- YEH SABSE ZAROORI HAI! Write operations CDN se nahi ho sakti.
-  // token: process.env.SANITY_API_WRITE_TOKEN, // <-- Token yahan use karna hai server actions ke liye.
+  token: process.env.SANITY_API_WRITE_TOKEN, // <-- Token yahan use karna hai server actions ke liye.
 });
 
 /**

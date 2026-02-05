@@ -8,16 +8,15 @@ require('dotenv').config({ path: './.env.local' });
 const { createClient } = require('@sanity/client');
 const process = require('process'); // Explicit import for clarity
 
-// --- Configuration ---
 const SANITY_PROJECT_ID = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
 const SANITY_DATASET = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
 const SANITY_API_TOKEN = process.env.SANITY_API_WRITE_TOKEN;
-const CHUNK_SIZE = 50; 
-const RATE_LIMIT_DELAY = 2000; // 2 seconds delay between large chunks
+const CHUNK_SIZE = 50; // 🔥🔥🔥 Make sure this line is present and uncommented
+const RATE_LIMIT_DELAY = 2000; // 🔥🔥🔥 Make sure this line is present and uncommented
 
 // --- Initial Validation ---
 if (!SANITY_PROJECT_ID || !SANITY_DATASET || !SANITY_API_TOKEN) {
-    console.error("❌ ERROR: Sanity credentials not found. Please set NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, and SANITY_API_WRITE_TOKEN.");
+    console.error("❌ ERROR: Sanity credentials not found. Please ensure NEXT_PUBLIC_SANITY_PROJECT_ID, NEXT_PUBLIC_SANITY_DATASET, and SANITY_API_WRITE_TOKEN are set in the environment.");
     process.exit(1);
 }
 

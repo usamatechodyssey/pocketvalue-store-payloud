@@ -1,121 +1,11 @@
-// // /src/app/account/_components/AccountSidebar.tsx
+
 // "use client";
 
 // import Link from "next/link";
 // import { usePathname } from "next/navigation";
 // import { signOut, useSession } from "next-auth/react";
 // import Image from "next/image";
-// import {
-//   LayoutDashboard,
-//   ShoppingBag,
-//   User as UserIcon,
-//   MapPin,
-//   LogOut,
-//   Loader2,
-// } from "lucide-react";
-
-// const sidebarNavItems = [
-//   { title: "Dashboard", href: "/account", icon: LayoutDashboard },
-//   { title: "My Orders", href: "/account/orders", icon: ShoppingBag },
-//   { title: "My Profile", href: "/account/profile", icon: UserIcon },
-//   { title: "Address Book", href: "/account/addresses", icon: MapPin },
-//   { title: "Return", href: "/account/returns", icon: MapPin },
-// ];
-
-// export default function AccountSidebar() {
-//   const pathname = usePathname();
-//   const { data: session, status } = useSession();
-
-//   // Loading state for user info
-//   if (status === "loading") {
-//     return (
-//       <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 h-full flex justify-center items-center">
-//         <Loader2 className="animate-spin text-brand-primary" size={32} />
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col h-full">
-//       {/* User Info Box */}
-//       <div className="p-4 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700">
-//         <div className="relative h-12 w-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 shrink-0">
-//           {session?.user?.image ? (
-//             <Image
-//               src={session.user.image}
-//               alt={session.user.name || "User"}
-//               fill
-//               sizes="48px"
-//               className="object-cover"
-//             />
-//           ) : (
-//             <div className="flex items-center justify-center h-full w-full">
-//               <UserIcon className="h-6 w-6 text-gray-400" />
-//             </div>
-//           )}
-//         </div>
-//         <div>
-//           <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate">
-//             {session?.user?.name || "Valued Customer"}
-//           </h3>
-//           <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-//             {session?.user?.email}
-//           </p>
-//         </div>
-//       </div>
-
-//       {/* Navigation Links */}
-//       <nav className="p-4 grow">
-//         <ul className="space-y-1">
-//           {sidebarNavItems.map((item) => {
-//             // More robust check: also highlights child routes like /account/orders/[orderId]
-//             const isActive =
-//               item.href === "/account"
-//                 ? pathname === item.href
-//                 : pathname.startsWith(item.href);
-
-//             return (
-//               <li key={item.title}>
-//                 <Link
-//                   href={item.href}
-//                   className={`relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-//                     isActive
-//                       ? "bg-brand-primary/10 text-brand-primary"
-//                       : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-//                   }`}
-//                 >
-//                   {/* Active state indicator bar */}
-//                   {isActive && (
-//                     <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-brand-primary rounded-r-full"></div>
-//                   )}
-//                   <item.icon size={18} />
-//                   <span>{item.title}</span>
-//                 </Link>
-//               </li>
-//             );
-//           })}
-//         </ul>
-//       </nav>
-
-//       {/* Logout Button */}
-//       <div className="border-t border-gray-200 dark:border-gray-700 p-2">
-//         <button
-//           onClick={() => signOut({ callbackUrl: "/" })}
-//           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-500 transition-colors"
-//         >
-//           <LogOut size={18} />
-//           <span>Logout</span>
-//         </button>
-//       </div>
-//     </div>
-//   );
-// }
-// "use client";
-
-// import Link from "next/link";
-// import { usePathname } from "next/navigation";
-// import { signOut, useSession } from "next-auth/react";
-// import Image from "next/image";
+// import { useEffect, useState } from "react";
 // import {
 //   LayoutDashboard,
 //   ShoppingBag,
@@ -141,17 +31,23 @@
 // export default function AccountSidebar({ onLinkClick }: { onLinkClick?: () => void }) {
 //   const pathname = usePathname();
 //   const { data: session, status } = useSession();
+//   const [mounted, setMounted] = useState(false);
 
-//   // Loading Skeleton
-//   if (status === "loading") {
+//   // FIX: Force client-side render only
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   // 🔴 HYDRATION FIX: Show loader until mounted on client
+//   if (!mounted || status === "loading") {
 //     return (
-//       <div className="p-8 flex justify-center items-center h-full">
+//       <div className="p-8 flex justify-center items-center h-full min-h-[300px]">
 //         <Loader2 className="animate-spin text-brand-primary" size={32} />
 //       </div>
 //     );
 //   }
 
-//   // === GUEST USER VIEW (Not Logged In) ===
+//   // === GUEST USER VIEW ===
 //   if (status === "unauthenticated") {
 //       return (
 //         <div className="flex flex-col h-full bg-white dark:bg-gray-900 lg:bg-transparent lg:dark:bg-transparent p-5">
@@ -262,7 +158,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // 🔥 useRef Added
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -290,12 +186,27 @@ export default function AccountSidebar({ onLinkClick }: { onLinkClick?: () => vo
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  // FIX: Force client-side render only
+  // 🔥 FIX START: Prevent Auto-Close on Mount
+  // Hum current path ko save kar rahay hain jab component pehli baar open hota hai.
+  const mountPath = useRef(pathname);
+
+  useEffect(() => {
+    // Check karein ke kya Path ACTUAL mein change hua hai?
+    // Agar Path wahi hai jo open hotay waqt tha, to close mat karo.
+    if (pathname !== mountPath.current) {
+        if (onLinkClick) {
+            onLinkClick();
+        }
+        // Naye path ko update kardo taake agli navigation sahi track ho
+        mountPath.current = pathname;
+    }
+  }, [pathname, onLinkClick]);
+  // 🔥 FIX END
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 🔴 HYDRATION FIX: Show loader until mounted on client
   if (!mounted || status === "loading") {
     return (
       <div className="p-8 flex justify-center items-center h-full min-h-[300px]">
@@ -318,7 +229,8 @@ export default function AccountSidebar({ onLinkClick }: { onLinkClick?: () => vo
                 </div>
                 <Link 
                     href="/login"
-                    onClick={onLinkClick}
+                    // Login page par jane ke liye drawer band karna zaroori hai
+                    onClick={onLinkClick} 
                     className="flex items-center justify-center gap-2 w-full py-3 bg-brand-primary text-white font-bold rounded-xl shadow-md hover:bg-brand-primary-hover transition-colors"
                 >
                     <LogIn size={20} /> Login / Register
@@ -373,6 +285,11 @@ export default function AccountSidebar({ onLinkClick }: { onLinkClick?: () => vo
               <li key={item.title}>
                 <Link
                   href={item.href}
+                  // Yahan hum onClick hata rahay hain kyunke ab useEffect handle karega.
+                  // Lekin agar user SAME page par click kare to drawer band hona chahiye ya nahi?
+                  // Usually nahi. User navigate karega tabhi band hoga.
+                  // Agar ap chahte hain click karte hi band hojaye (bhalay same page ho), to onClick rehne dein.
+                  // Best UX ye hai ke ise rehne dein taake user ko feedback mile.
                   onClick={onLinkClick} 
                   className={`group relative flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 border
                     ${

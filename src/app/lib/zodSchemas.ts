@@ -584,6 +584,97 @@ export const CategoryCsvRowSchema = z.object({
 /**
  * @description Product ki ek variant ke liye.
  */
+// const ProductVariantSchema = z.object({
+//     _key: z.string(),
+//     name: z.string().min(1),
+//     sku: z.string().optional(),
+//     price: z.number().min(0),
+//     salePrice: z.number().min(0).optional().nullable(),
+//     stock: z.number().min(0).optional().nullable(),
+//     inStock: z.boolean(),
+//     images: z.array(z.any()).optional(),
+//     weight: z.number().min(0).optional().nullable(),
+//     dimensions: z.object({ height: z.number().min(0).optional().nullable(), width: z.number().min(0).optional().nullable(), depth: z.number().min(0).optional().nullable() }).optional(),
+//     attributes: z.array(z.object({ _key: z.string(), name: z.string(), value: z.string() })),
+// });
+
+// /**
+//  * @description Admin panel se naya product banane ke liye data payload.
+//  */
+// export const ProductPayloadSchema = z.object({
+//   title: z.string().min(3),
+//   slug: z.string().regex(/^[a-z0-9-]+$/),
+//   description: z.any().optional(),
+//   videoUrl: z.url().optional().or(z.literal('')),
+//   brandId: z.string().optional(),
+//   categoryIds: z.array(z.string()).optional(),
+//   isBestSeller: z.boolean().optional(),
+//   isNewArrival: z.boolean().optional(),
+//   isFeatured: z.boolean().optional(),
+//   isOnDeal: z.boolean().optional(),
+//   rating: z.number().optional(),
+//   variants: z.array(ProductVariantSchema).min(1),
+// });
+
+// /**
+//  * @description Admin panel se product delete karne ke liye.
+//  */
+// export const DeleteProductSchema = z.object({
+//     productId: z.string().min(1),
+// });
+
+// /**
+//  * @description Bulk product upload ke liye CSV ki parent row ko validate karta hai.
+//  */
+// const CsvParentRowSchema = z.object({
+//   title: z.string().min(1, { message: "Parent row must have a 'title'." }),
+//   slug: z.string().min(1, { message: "Parent row must have a 'slug'." }),
+//   description: z.string().optional(),
+//   brand: z.string().optional(),
+//   categories: z.string().optional(),
+//   videoUrl: z.url().optional().or(z.literal('')),
+//   isBestSeller: z.string().optional().transform(v => v?.toLowerCase() === 'true'),
+//   isNewArrival: z.string().optional().transform(v => v?.toLowerCase() === 'true'),
+//   isFeatured: z.string().optional().transform(v => v?.toLowerCase() === 'true'),
+//   isOnDeal: z.string().optional().transform(v => v?.toLowerCase() === 'true'),
+//   rating: z.coerce.number().optional(),
+// });
+
+// /**
+//  * @description Bulk product upload ke liye CSV ki variant row ko validate karta hai.
+//  */
+// const CsvVariantRowSchema = z.object({
+//   variant_name: z.string().min(1, { message: "Variant row must have a 'variant_name'." }),
+//   variant_price: z.coerce.number().min(0, { message: "Variant price is invalid." }),
+//   variant_salePrice: z.coerce.number().optional(),
+//   variant_sku: z.string().optional(),
+//   variant_stock: z.coerce.number().optional(),
+//   variant_inStock: z.string().optional().transform(v => v?.toLowerCase() === 'true'),
+//   variant_images: z.string().optional(),
+//   variant_weight: z.coerce.number().optional(),
+//   variant_height: z.coerce.number().optional(),
+//   variant_width: z.coerce.number().optional(),
+//   variant_depth: z.coerce.number().optional(),
+//   variant_attributes: z.string().optional(),
+//   // 🔥 NAYA CODE (CSV Columns Support):
+//   attribute1_name: z.string().optional(),
+//   attribute1_value: z.string().optional(),
+//   attribute2_name: z.string().optional(),
+//   attribute2_value: z.string().optional(),
+//   attribute3_name: z.string().optional(),
+//   attribute3_value: z.string().optional(),
+// });
+
+// export const ProductCsvRowSchema = z.union([
+//     CsvParentRowSchema.partial().extend(CsvVariantRowSchema.shape),
+//     CsvParentRowSchema,
+// ]);
+
+// export const ProductGroupSchema = z.array(z.any())
+//   .min(2, { message: "Invalid group: Each product needs at least one parent and one variant row." })
+//   .refine((group): group is [any, ...any[]] => group[0].title && group[0].slug, { 
+//     message: "Invalid group: The first row must be a parent row with a 'title' and 'slug'." 
+//   });
 const ProductVariantSchema = z.object({
     _key: z.string(),
     name: z.string().min(1),
@@ -598,13 +689,12 @@ const ProductVariantSchema = z.object({
     attributes: z.array(z.object({ _key: z.string(), name: z.string(), value: z.string() })),
 });
 
-/**
- * @description Admin panel se naya product banane ke liye data payload.
- */
 export const ProductPayloadSchema = z.object({
   title: z.string().min(3),
   slug: z.string().regex(/^[a-z0-9-]+$/),
   description: z.any().optional(),
+  // 🔥 UPDATED: Added specifications here
+  specifications: z.any().optional(), 
   videoUrl: z.url().optional().or(z.literal('')),
   brandId: z.string().optional(),
   categoryIds: z.array(z.string()).optional(),
@@ -616,20 +706,16 @@ export const ProductPayloadSchema = z.object({
   variants: z.array(ProductVariantSchema).min(1),
 });
 
-/**
- * @description Admin panel se product delete karne ke liye.
- */
 export const DeleteProductSchema = z.object({
     productId: z.string().min(1),
 });
 
-/**
- * @description Bulk product upload ke liye CSV ki parent row ko validate karta hai.
- */
 const CsvParentRowSchema = z.object({
   title: z.string().min(1, { message: "Parent row must have a 'title'." }),
   slug: z.string().min(1, { message: "Parent row must have a 'slug'." }),
   description: z.string().optional(),
+  // 🔥 UPDATED: Added specifications here for CSV import
+  specifications: z.string().optional(),
   brand: z.string().optional(),
   categories: z.string().optional(),
   videoUrl: z.url().optional().or(z.literal('')),
@@ -640,9 +726,6 @@ const CsvParentRowSchema = z.object({
   rating: z.coerce.number().optional(),
 });
 
-/**
- * @description Bulk product upload ke liye CSV ki variant row ko validate karta hai.
- */
 const CsvVariantRowSchema = z.object({
   variant_name: z.string().min(1, { message: "Variant row must have a 'variant_name'." }),
   variant_price: z.coerce.number().min(0, { message: "Variant price is invalid." }),
@@ -656,6 +739,12 @@ const CsvVariantRowSchema = z.object({
   variant_width: z.coerce.number().optional(),
   variant_depth: z.coerce.number().optional(),
   variant_attributes: z.string().optional(),
+  attribute1_name: z.string().optional(),
+  attribute1_value: z.string().optional(),
+  attribute2_name: z.string().optional(),
+  attribute2_value: z.string().optional(),
+  attribute3_name: z.string().optional(),
+  attribute3_value: z.string().optional(),
 });
 
 export const ProductCsvRowSchema = z.union([
@@ -664,10 +753,11 @@ export const ProductCsvRowSchema = z.union([
 ]);
 
 export const ProductGroupSchema = z.array(z.any())
-  .min(2, { message: "Invalid group: Each product needs at least one parent and one variant row." })
+  .min(1, { message: "Invalid group." }) // Allow min 1 for single row products
   .refine((group): group is [any, ...any[]] => group[0].title && group[0].slug, { 
     message: "Invalid group: The first row must be a parent row with a 'title' and 'slug'." 
   });
+
 
 
 // ====================================================================

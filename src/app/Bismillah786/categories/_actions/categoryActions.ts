@@ -229,16 +229,11 @@ export async function batchCreateCategories(categories: unknown[]) {
     errors,
   };
 }
-
 // === ACTION #6: DELETE ALL CATEGORIES AND PRODUCTS (NEW SECURE METHOD) ===
-// --- ZOD SCHEMA FOR MASS DELETION (FIXED) ---
 const CONFIRMATION_PHRASE = "I AM SURE";
 
 const MassDeletionSchema = z.object({
     identifier: z.string().min(1, "Category Name or Slug is required."),
-    
-    // FIX: z.literal ke bajaye z.string().refine use kar rahe hain
-    // Ya phir simple z.literal use karte hain agar custom error nahi chahiye
     confirmPhrase: z.string().refine(val => val === CONFIRMATION_PHRASE, {
         message: `You must type the phrase '${CONFIRMATION_PHRASE}' exactly to confirm deletion.`,
     }),
@@ -255,22 +250,26 @@ export async function massDeleteCategoryHierarchy(payload: MassDeletionPayload):
     const { identifier } = validation.data;
     
     try {
-        // SECURITY CHECK: Mass deletion sirf Super Admin kar sakta hai.
         await verifyAdmin(['Super Admin']);
         
-        // --- ASLI SCRIPT KO EXECUTE KAREIN ---
         const scriptPath = path.join(process.cwd(), 'scripts/sanity-category-deletion-surgeon.js');
-        
-        // FIX: Path mein spaces ko handle karne ke liye double quotes zaroori hain.
         const quotedScriptPath = `"${scriptPath}"`;
-        // Identifier ko bhi quote mein rakhein taake agar naam mein space ho to masla na ho.
         const command = `node ${quotedScriptPath} "${identifier}"`; 
         
         console.log(`Executing command: ${command}`);
 
         const { stdout, stderr } = await new Promise<{ stdout: string, stderr: string }>((resolve, reject) => {
-            // maxBuffer ko 5MB tak badha diya taake bade logs handle ho sakein
-            exec(command, { maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
+            exec(command, { 
+                maxBuffer: 1024 * 1024 * 5,
+                // 🔥🔥🔥 Yahan hum environment variables ko child process mein pass kar rahay hain.
+                // Ye sabse zaroori fix hai Vercel par scripts chalane ke liye.
+                env: {
+                    ...process.env, // Existing env variables bhi inherit honge
+                    NEXT_PUBLIC_SANITY_PROJECT_ID: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+                    NEXT_PUBLIC_SANITY_DATASET: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
+                    SANITY_API_WRITE_TOKEN: process.env.SANITY_API_WRITE_TOKEN,
+                }
+            }, (error, stdout, stderr) => {
                 if (error) {
                     console.error(`Script Execution Error: ${error.message}`);
                     return reject({ stdout, stderr, error });
@@ -281,18 +280,15 @@ export async function massDeleteCategoryHierarchy(payload: MassDeletionPayload):
 
         const logs = stdout.split('\n').filter(line => line.trim().length > 0);
 
-        // --- FINAL LOGIC CHECK ---
         const isSuccessfulCompletion = stdout.includes('Alhamdulillah! Mission accomplished.');
         const isNothingToDo = stdout.includes('Nothing to do.');
 
         if (stderr || stdout.includes('❌ ERROR')) {
-             // Agar koi script error ya stderr hai
              console.error("Script returned errors or warnings:", stderr || "Check logs for ❌ ERROR");
              return { success: false, message: "Deletion script failed or finished with errors. See logs.", logs: [...logs, stderr] };
         }
         
         if (isSuccessfulCompletion || isNothingToDo) {
-            // Agar products mile aur delete ho gaye, ya products nahi mile (dono successful scenarios)
             revalidatePath('/Bismillah786/products');
             revalidatePath('/Bismillah786/categories');
             
@@ -303,7 +299,6 @@ export async function massDeleteCategoryHierarchy(payload: MassDeletionPayload):
             return { success: true, message: finalMessage, logs };
         } 
         
-        // Agar yahan tak pohancha aur koi bhi success condition true nahi hui
         return { success: false, message: "Script finished, but its status is unclear. Check logs for missing output.", logs };
         
     } catch (error: any) {
@@ -316,6 +311,93 @@ export async function massDeleteCategoryHierarchy(payload: MassDeletionPayload):
         return { success: false, message: error.message || "An unexpected error occurred during mass deletion." };
     }
 }
+
+// // === ACTION #6: DELETE ALL CATEGORIES AND PRODUCTS (NEW SECURE METHOD) ===
+// // --- ZOD SCHEMA FOR MASS DELETION (FIXED) ---
+// const CONFIRMATION_PHRASE = "I AM SURE";
+
+// const MassDeletionSchema = z.object({
+//     identifier: z.string().min(1, "Category Name or Slug is required."),
+    
+//     // FIX: z.literal ke bajaye z.string().refine use kar rahe hain
+//     // Ya phir simple z.literal use karte hain agar custom error nahi chahiye
+//     confirmPhrase: z.string().refine(val => val === CONFIRMATION_PHRASE, {
+//         message: `You must type the phrase '${CONFIRMATION_PHRASE}' exactly to confirm deletion.`,
+//     }),
+// });
+
+// export type MassDeletionPayload = z.infer<typeof MassDeletionSchema>;
+
+// // === ACTION #6: HIERARCHICAL MASS DELETION (FINAL & ROBUST VERSION) ===
+// export async function massDeleteCategoryHierarchy(payload: MassDeletionPayload): Promise<{ success: boolean; message: string; logs?: string[] }> {
+//     const validation = MassDeletionSchema.safeParse(payload);
+//     if (!validation.success) {
+//         return { success: false, message: validation.error.issues[0].message };
+//     }
+//     const { identifier } = validation.data;
+    
+//     try {
+//         // SECURITY CHECK: Mass deletion sirf Super Admin kar sakta hai.
+//         await verifyAdmin(['Super Admin']);
+        
+//         // --- ASLI SCRIPT KO EXECUTE KAREIN ---
+//         const scriptPath = path.join(process.cwd(), 'scripts/sanity-category-deletion-surgeon.js');
+        
+//         // FIX: Path mein spaces ko handle karne ke liye double quotes zaroori hain.
+//         const quotedScriptPath = `"${scriptPath}"`;
+//         // Identifier ko bhi quote mein rakhein taake agar naam mein space ho to masla na ho.
+//         const command = `node ${quotedScriptPath} "${identifier}"`; 
+        
+//         console.log(`Executing command: ${command}`);
+
+//         const { stdout, stderr } = await new Promise<{ stdout: string, stderr: string }>((resolve, reject) => {
+//             // maxBuffer ko 5MB tak badha diya taake bade logs handle ho sakein
+//             exec(command, { maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
+//                 if (error) {
+//                     console.error(`Script Execution Error: ${error.message}`);
+//                     return reject({ stdout, stderr, error });
+//                 }
+//                 resolve({ stdout, stderr });
+//             });
+//         });
+
+//         const logs = stdout.split('\n').filter(line => line.trim().length > 0);
+
+//         // --- FINAL LOGIC CHECK ---
+//         const isSuccessfulCompletion = stdout.includes('Alhamdulillah! Mission accomplished.');
+//         const isNothingToDo = stdout.includes('Nothing to do.');
+
+//         if (stderr || stdout.includes('❌ ERROR')) {
+//              // Agar koi script error ya stderr hai
+//              console.error("Script returned errors or warnings:", stderr || "Check logs for ❌ ERROR");
+//              return { success: false, message: "Deletion script failed or finished with errors. See logs.", logs: [...logs, stderr] };
+//         }
+        
+//         if (isSuccessfulCompletion || isNothingToDo) {
+//             // Agar products mile aur delete ho gaye, ya products nahi mile (dono successful scenarios)
+//             revalidatePath('/Bismillah786/products');
+//             revalidatePath('/Bismillah786/categories');
+            
+//             const finalMessage = isNothingToDo 
+//                                  ? `No products found in the hierarchy. Category check successful.` 
+//                                  : `Hierarchical deletion successfully completed for category: ${identifier}.`;
+                                 
+//             return { success: true, message: finalMessage, logs };
+//         } 
+        
+//         // Agar yahan tak pohancha aur koi bhi success condition true nahi hui
+//         return { success: false, message: "Script finished, but its status is unclear. Check logs for missing output.", logs };
+        
+//     } catch (error: any) {
+//         console.error("Mass Deletion API Error:", error);
+        
+//         if (error.code === 'ENOENT') {
+//              return { success: false, message: "CRITICAL ERROR: Deletion script file 'sanity-category-deletion-surgeon.js' not found in the 'scripts' folder." };
+//         }
+        
+//         return { success: false, message: error.message || "An unexpected error occurred during mass deletion." };
+//     }
+// }
 // // === ACTION #6: HIERARCHICAL MASS DELETION (SLIGHTLY CLEANER EXEC) ===
 // export async function massDeleteCategoryHierarchy(payload: MassDeletionPayload): Promise<{ success: boolean; message: string; logs?: string[] }> {
 //     const validation = MassDeletionSchema.safeParse(payload);

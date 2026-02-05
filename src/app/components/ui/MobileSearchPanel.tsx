@@ -1,3 +1,4 @@
+
 // "use client";
 
 // import { useState, useEffect } from "react";
@@ -43,11 +44,16 @@
 //   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 //   const router = useRouter();
 
+//   // 🔥 FIX: Prevent Cascading Render on Modal Open
+//   // LocalStorage read karna 'next tick' par shift kiya.
 //   useEffect(() => {
-//     const storedSearches = localStorage.getItem("pocketvalue_recent_searches");
-//     if (storedSearches) {
-//       setRecentSearches(JSON.parse(storedSearches));
-//     }
+//     const timer = setTimeout(() => {
+//       const storedSearches = localStorage.getItem("pocketvalue_recent_searches");
+//       if (storedSearches) {
+//         setRecentSearches(JSON.parse(storedSearches));
+//       }
+//     }, 0);
+//     return () => clearTimeout(timer);
 //   }, [isOpen]);
 
 //   const clearRecentSearches = () => {
@@ -93,7 +99,6 @@
 //             animate={{ y: 0 }}
 //             exit={{ y: "100%" }}
 //             transition={{ type: "spring", stiffness: 350, damping: 35 }}
-//             // Height is calculated to leave room for Bottom Nav
 //             className="fixed bottom-0 left-0 right-0 h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 z-50 flex flex-col rounded-t-4xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:hidden overflow-hidden"
 //           >
 //             {/* Handle Bar for Drag Feel */}
@@ -215,7 +220,6 @@
 //                           onClick={onClose}
 //                           className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 hover:bg-white hover:shadow-md dark:hover:bg-gray-700 transition-all active:scale-95 border border-gray-100 dark:border-gray-700"
 //                         >
-//                           {/* === FIX IS HERE: Added dark:bg-gray-700 === */}
 //                           <div className="w-14 h-14 relative rounded-full overflow-hidden bg-white dark:bg-gray-700 shadow-sm p-1 transition-colors">
 //                             {cat.image ? (
 //                               <Image
@@ -256,7 +260,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SanityCategory } from "@/sanity/types/product_types";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // 🔥 Added usePathname
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -291,9 +295,16 @@ export default function SearchPanel({
 }: SearchPanelProps) {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const router = useRouter();
+  const pathname = usePathname(); // 🔥 Hook
 
-  // 🔥 FIX: Prevent Cascading Render on Modal Open
-  // LocalStorage read karna 'next tick' par shift kiya.
+  // 🔥 FIX START: Auto-Close on Route Change
+  useEffect(() => {
+    if (isOpen) {
+        onClose();
+    }
+  }, [pathname]);
+  // 🔥 FIX END
+
   useEffect(() => {
     const timer = setTimeout(() => {
       const storedSearches = localStorage.getItem("pocketvalue_recent_searches");
@@ -465,7 +476,6 @@ export default function SearchPanel({
                         <Link
                           key={cat._id}
                           href={`/category/${cat.slug}`}
-                          onClick={onClose}
                           className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 dark:bg-gray-800 hover:bg-white hover:shadow-md dark:hover:bg-gray-700 transition-all active:scale-95 border border-gray-100 dark:border-gray-700"
                         >
                           <div className="w-14 h-14 relative rounded-full overflow-hidden bg-white dark:bg-gray-700 shadow-sm p-1 transition-colors">
