@@ -94,7 +94,7 @@ export default function PWAInstallPrompt() {
 
         <div className="flex gap-4 items-center">
           <div className="shrink-0 w-14 h-14 relative rounded-xl overflow-hidden shadow-sm border border-gray-100">
-            <Image src="/Logo1.png" alt="App Icon" fill className="object-cover" />
+            <Image src="/Logo1.png" alt="App Icon" fill className="object-cover" unoptimized/>
           </div>
 
           <div className="flex-1">

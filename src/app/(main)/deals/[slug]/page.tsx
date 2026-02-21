@@ -30,7 +30,7 @@ export default async function CampaignPage({ params }: PageProps) {
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       
       {/* === CAMPAIGN BANNER HEADER (Full Width) === */}
-      <div className="relative w-full h-[200px] md:h-[300px] bg-gray-800 flex items-center justify-center overflow-hidden">
+      <div className="relative w-full h-50 md:h-75 bg-gray-800 flex items-center justify-center overflow-hidden">
         {banner ? (
             <Image src={banner} alt={title} fill className="object-cover opacity-60" />
         ) : (
@@ -46,7 +46,7 @@ export default async function CampaignPage({ params }: PageProps) {
 
       {/* === PRODUCT LISTING (Consistent Alignment) === */}
       {/* ALIGNMENT FIX: max-w-[1920px] & px-4 md:px-8 */}
-      <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-8 md:py-12">
+      <div className="max-w-480 mx-auto px-2 md:px-4 py-8 md:py-12">
         <ProductListingClient
             initialProducts={products || []}
             filterData={filterData}

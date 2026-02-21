@@ -11,7 +11,7 @@ import ReactPDF from "@react-pdf/renderer";
 // --- REFACTORED IMPORTS ---
 import connectMongoose from "@/app/lib/mongoose";
 import Order, { IOrder } from "@/models/Order"; // Hamara naya Mongoose model aur type
-import { InvoiceTemplate } from "@/app/account/orders/[orderId]/_components/Invoice/InvoiceTemplate";
+import { InvoiceTemplate } from "@/app/(main)/account/orders/[orderId]/_components/Invoice/InvoiceTemplate";
 /**
  * Helper function to convert a NodeJS ReadableStream into a Buffer.
  */

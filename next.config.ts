@@ -1,30 +1,54 @@
 
-// import { withSentryConfig } from "@sentry/nextjs";
 // import type { NextConfig } from "next";
 // import withPWAInit from "@ducanh2912/next-pwa";
+// import { withPayload } from '@payloadcms/next/withPayload' // <-- NAYA IMPORT
 
 // /** @type {import('next').NextConfig} */
 // const nextConfig: NextConfig = {
-//   // 🔥🔥🔥 LATEST NEXT.JS CONFIGURATION 🔥🔥🔥
-  
-//   // FIX 1: New Top-Level Key for Node.js package tracing (For Font/PDF)
-//   // Ye Vercel ko batata hai ke 'public/fonts' folder ko API ke sath bhejo
+//   // 1. Node.js tracing include (For Fonts/PDFs)
 //   outputFileTracingIncludes: {
 //     '/api/**/*': ['./public/fonts/**/*'], 
 //   },
   
-//   // FIX 2: New Top-Level Key for external Server Components packages (For @react-pdf/renderer)
-//   serverExternalPackages: ['@react-pdf/renderer'],
+//   // 2. Server External Packages
+//   serverExternalPackages: [
+//     '@react-pdf/renderer', 
+//     'mongoose', 
+//     'mongodb', 
+//     'bcryptjs',
+//     'nodemailer'
+//   ],
 
-//   // FIX 3: Experimental section mein sirf baki settings rahengi
-//   experimental: {
-//     webpackBuildWorker: true,
-//     // Note: Invalid keys (jo upar move ho gaye hain) ko yahan se hata diya gaya hai
+//   reactStrictMode: true, 
+
+//   // 3. Compiler Optimization
+//   compiler: {
+//     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error"] } : false,
+//     styledComponents: true, 
 //   },
 
-//   // 2. Webpack Configuration for Duplicates/Minification
+//   // 4. Experimental Settings
+//   experimental: {
+//     webpackBuildWorker: false, 
+//     optimizePackageImports: [
+//       'lucide-react', 
+//       'framer-motion', 
+//       'lodash', 
+//       'react-icons', 
+//       '@headlessui/react',
+//       'recharts',
+//       'date-fns',
+//       'gsap',
+//       'swiper',
+//       'react-select',
+//       'react-leaflet',
+//       'leaflet',
+//       '@tiptap/react'
+//     ],
+//   },
+
+//   // 5. Webpack Optimization
 //   webpack: (config, { isServer }) => {
-//     // ... (Your Webpack code remains the same as it's not the issue)
 //     if (!isServer) {
 //       if (!config.optimization.splitChunks) {
 //           config.optimization.splitChunks = {};
@@ -52,15 +76,14 @@
 //         },
 //       };
       
-//       // ✅ FIX: Runtime chunk optimization (Helps with caching and HMR)
 //       config.optimization.runtimeChunk = 'single';
 //     }
 //     return config;
 //   },
 
-//   // 🔥🔥🔥 REST OF YOUR CONFIG 🔥🔥🔥
-
+//   // 6. Images Configuration
 //   images: {
+//     loaderFile: './image-loader.ts',
 //     formats: ['image/avif', 'image/webp'],
 //     qualities: [75, 85, 90, 95], 
 //     remotePatterns: [
@@ -70,10 +93,11 @@
 //       { protocol: 'https', hostname: 'res.cloudinary.com', port: '', pathname: '**' },
 //     ],
 //   },
+
 //   transpilePackages: ['papaparse'],
 // };
 
-// // PWA CONFIGURATION
+// // PWA CONFIGURATION (Keeping this as it is)
 // const withPWA = withPWAInit({
 //   dest: "public",
 //   cacheOnFrontEndNav: true,
@@ -85,55 +109,38 @@
 //   },
 // });
 
-// // // ORIGINAL CONFIG WITH SENTRY
-// export default withSentryConfig(
-//   withPWA(nextConfig),
-//   {
-//     org: "pocketvalue",
-//     project: "javascript-nextjs",
-//     authToken: process.env.SENTRY_AUTH_TOKEN,
-//     silent: !process.env.CI,
-//     widenClientFileUpload: true,
-//     disableLogger: true,
-//   }
-// );
-import { withSentryConfig } from "@sentry/nextjs";
+// // ✅ FINAL EXPORT: Sentry hat gaya, sirf PWA reh gaya
+// export default withPayload(withPWA(nextConfig));
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
+import { withPayload } from '@payloadcms/next/withPayload'
 
-/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  // 1. Node.js tracing include (For Fonts/PDFs)
+  // ✅ FIX: Next.js 16 Canary crash fix
+  compress: false,
+  
   outputFileTracingIncludes: {
     '/api/**/*': ['./public/fonts/**/*'], 
   },
   
-  // 2. Server External Packages (Heavy Backend Libs)
-  // Inhe server components mein hi rakho, client bundle mein mat bhejo.
   serverExternalPackages: [
     '@react-pdf/renderer', 
     'mongoose', 
     'mongodb', 
     'bcryptjs',
-    'nodemailer'
+    'nodemailer',
+    'sharp' // Sharp ko bhi yahan add karna behtar hai
   ],
 
-  // 3. React Strict Mode
   reactStrictMode: true, 
 
-  // 4. Compiler Optimization
   compiler: {
-    // Production mein console.log hata dega
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error"] } : false,
-    // Styled Components support (Tumhari package.json mein hai)
     styledComponents: true, 
   },
 
-  // 5. Experimental Settings
   experimental: {
     webpackBuildWorker: false, 
-
-    // 🔥🔥🔥 SMART TREE SHAKING (Added all heavy libs from your package.json) 🔥🔥🔥
     optimizePackageImports: [
       'lucide-react', 
       'framer-motion', 
@@ -151,13 +158,11 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // 6. Webpack Optimization
   webpack: (config, { isServer }) => {
     if (!isServer) {
       if (!config.optimization.splitChunks) {
           config.optimization.splitChunks = {};
       }
-      
       config.optimization.splitChunks = {
         chunks: 'all',
         minSize: 20000,
@@ -179,17 +184,13 @@ const nextConfig: NextConfig = {
           },
         },
       };
-      
       config.optimization.runtimeChunk = 'single';
     }
     return config;
   },
 
-  // 7. Images Configuration (Sanity Loader)
   images: {
-  
     loaderFile: './image-loader.ts',
-
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 85, 90, 95], 
     remotePatterns: [
@@ -199,11 +200,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com', port: '', pathname: '**' },
     ],
   },
-
   transpilePackages: ['papaparse'],
 };
 
-// PWA CONFIGURATION
 const withPWA = withPWAInit({
   dest: "public",
   cacheOnFrontEndNav: true,
@@ -215,15 +214,4 @@ const withPWA = withPWAInit({
   },
 });
 
-// EXPORT WITH SENTRY & PWA
-export default withSentryConfig(
-  withPWA(nextConfig),
-  {
-    org: "pocketvalue",
-    project: "javascript-nextjs",
-    authToken: process.env.SENTRY_AUTH_TOKEN,
-    silent: !process.env.CI,
-    widenClientFileUpload: true,
-    disableLogger: true,
-  }
-);
+export default withPayload(withPWA(nextConfig));
