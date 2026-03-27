@@ -1,11 +1,9 @@
 // src/sanity/lib/queries.ts
-import { ShippingRule } from '@/types';
-import SanityProduct, { BreadcrumbItem } from '../types/product_types';
-import { client } from './client'
-import groq from 'groq'
-import { cache } from 'react';
-
-
+import { ShippingRule } from "@/types";
+import SanityProduct, { BreadcrumbItem } from "../types/product_types";
+import { client } from "./client";
+import groq from "groq";
+import { cache } from "react";
 
 // === Product Fields Fragment (No Changes) ===
 const productFields = groq`
@@ -132,13 +130,13 @@ export const GET_CATEGORY_METADATA = groq`
   seo
 }`;
 
-
 // === NAYI "SUPER QUERY" FOR SEARCH PLP ===
 export const GET_SEARCH_PLP_DATA = async (searchTerm: string) => {
-    const trimmed = searchTerm?.trim();
-    if (!trimmed) return { initialProducts: [], filterData: null, categoryTree: null };
+  const trimmed = searchTerm?.trim();
+  if (!trimmed)
+    return { initialProducts: [], filterData: null, categoryTree: null };
 
-    const query = groq`{
+  const query = groq`{
       "productIds": *[_type == "product" && (title match $term || brand->name match $term || categories[]->name match $term)]._id,
       "filterData": {
         "brands": array::unique(*[_type == "product" && (title match $term)].brand->{
@@ -153,29 +151,29 @@ export const GET_SEARCH_PLP_DATA = async (searchTerm: string) => {
         }
       }
     }`;
-    const { productIds, filterData } = await client.fetch(query, { term: `*${trimmed}*` });
-    
-    const initialProducts = await getProductsByIds(productIds);
-    // Search page ke liye categoryTree null rahega
-    return { initialProducts, filterData, categoryTree: null }; 
-}
+  const { productIds, filterData } = await client.fetch(query, {
+    term: `*${trimmed}*`,
+  });
+
+  const initialProducts = await getProductsByIds(productIds);
+  // Search page ke liye categoryTree null rahega
+  return { initialProducts, filterData, categoryTree: null };
+};
 
 // Helper function to fetch products by IDs
 export const getProductsByIds = async (productIds: string[]) => {
   if (!productIds || productIds.length === 0) return [];
   const query = groq`*[_type == "product" && _id in $productIds] { ${productFields} }`;
   return await client.fetch(query, { productIds });
-}
+};
 
 // --- AAPKE TAMAM PURANE, BEHTAREEN FUNCTIONS WESE HI RAHENGE ---
 // Hum inhein bilkul nahi chherenge taake aapki baaqi site chalti rahe.
 
 export const getAllProducts = async () => {
-  const query = groq`*[_type == "product"]{ ${productFields} }`
-  return await client.fetch(query)
-}
-
-
+  const query = groq`*[_type == "product"]{ ${productFields} }`;
+  return await client.fetch(query);
+};
 
 export const getTopBrands = async () => {
   const query = groq`*[_type == "brand"][0...8]{
@@ -190,11 +188,13 @@ export const getTopBrands = async () => {
 // === WISHLIST KE LIYE NAYI, POWERFUL QUERY ===
 // Yeh query na sirf rating, balke live price aur stock bhi layegi
 // === WISHLIST KE LIYE NAYI, POWERFUL QUERY (FINAL FIX) ===
-export const getLiveProductDataForCards = async (productIds: string[]): Promise<SanityProduct[]> => {
-    if (!productIds || productIds.length === 0) {
-        return [];
-    }
-    const query = groq`
+export const getLiveProductDataForCards = async (
+  productIds: string[],
+): Promise<SanityProduct[]> => {
+  if (!productIds || productIds.length === 0) {
+    return [];
+  }
+  const query = groq`
       *[_type == "product" && _id in $productIds] {
         _id,
         title,
@@ -219,7 +219,7 @@ export const getLiveProductDataForCards = async (productIds: string[]): Promise<
         }
       }
     `;
-    return await client.fetch(query, { productIds });
+  return await client.fetch(query, { productIds });
 };
 
 export async function getSingleProduct(slug: string) {
@@ -232,10 +232,11 @@ export async function getSingleProduct(slug: string) {
   return await client.fetch(query, { slug });
 }
 
-
-
 // === NAYA FUNCTION: RELATED PRODUCTS KE LIYE ===
-export const getRelatedProducts = async (currentProductId: string, categoryIds: string[]) => {
+export const getRelatedProducts = async (
+  currentProductId: string,
+  categoryIds: string[],
+) => {
   if (!categoryIds || categoryIds.length === 0) return [];
 
   // Yeh query ussi category ke baaki products layegi, lekin current product ko chhor kar
@@ -250,10 +251,10 @@ export const getRelatedProducts = async (currentProductId: string, categoryIds: 
 // export const HOMEPAGE_DATA_QUERY = groq`{
 //     "featuredProductsTitle": "Featured Products",
 //     "featuredProducts": *[_type == "product" && isFeatured == true] | order(_createdAt desc)[0...12] { ${productFields} },
-    
+
 //     "bestSellersTitle": "Best Sellers",
 //     "bestSellers": *[_type == "product" && isBestSeller == true] | order(rating desc, reviewCount desc)[0...12]{ ${productFields} },
-    
+
 //     "newArrivalsTitle": "New Arrivals",
 //     "newArrivals": *[_type == "product"] | order(_createdAt desc)[0...12]{ ${productFields} },
 
@@ -277,7 +278,6 @@ export const getRelatedProducts = async (currentProductId: string, categoryIds: 
 //         }
 //     }
 // }`;
-
 
 // === YAHAN ASAL TABDEELI HAI ===
 // Humne har level ki sub-category ke saath uski image fetch karne ka code add kar diya hai.
@@ -303,7 +303,7 @@ export const getNavigationCategories = async () => {
     }
   `;
   return await client.fetch(query);
-}
+};
 
 export const getCategoryPageData = async (slugPath: string[]) => {
   const currentSlug = slugPath[slugPath.length - 1];
@@ -339,7 +339,7 @@ export const getCategoryPageData = async (slugPath: string[]) => {
   `;
   const result = await client.fetch(query, { currentSlug });
   return result || { currentCategory: null, categoryTree: null };
-}
+};
 const PRODUCTS_PER_PAGE = 40;
 // src/sanity/lib/queries.ts
 
@@ -352,19 +352,19 @@ export const searchProducts = async (
     categorySlug?: string;
     campaignSlug?: string;
     isDeal?: boolean;
-    filters?: { 
+    filters?: {
       brands?: string[];
       categories?: string[];
       availability?: string[]; // ✨ NEW: Stock Status
-      isOnSale?: boolean;      // ✨ NEW: Sale Status
-      minRating?: number;      // ✨ NEW: Star Rating
-      [key:string]: any 
+      isOnSale?: boolean; // ✨ NEW: Sale Status
+      minRating?: number; // ✨ NEW: Star Rating
+      [key: string]: any;
     };
     minPrice?: number;
     maxPrice?: number;
     sortOrder?: string;
     page?: number;
-  } = {}
+  } = {},
 ) => {
   const {
     searchTerm,
@@ -374,45 +374,54 @@ export const searchProducts = async (
     filters = {}, // Default empty object
     minPrice,
     maxPrice,
-    sortOrder = 'best-match',
+    sortOrder = "best-match",
     page = 1,
   } = options;
-  
+
   const params: { [key: string]: any } = {};
-  
+
   // Base Conditions
   const conditions: string[] = [`_type == "product"`, `count(variants) > 0`];
   const variantConditions: string[] = [];
 
   // 1. Campaign & Context Logic
   if (campaignSlug) {
-     conditions.push(`references(*[_type=="campaign" && slug.current == $campaignSlug]._id)`);
-     params.campaignSlug = campaignSlug;
+    conditions.push(
+      `references(*[_type=="campaign" && slug.current == $campaignSlug]._id)`,
+    );
+    params.campaignSlug = campaignSlug;
   }
   if (isDeal) {
-      conditions.push(`isOnDeal == true`);
+    conditions.push(`isOnDeal == true`);
   }
 
   // 2. Sort-Specific Pre-filtering
-  if (sortOrder === 'newest' && !searchTerm) conditions.push(`isNewArrival == true`);
-  if (sortOrder === 'best-selling' && !searchTerm) conditions.push(`isBestSeller == true`);
-  
+  if (sortOrder === "newest" && !searchTerm)
+    conditions.push(`isNewArrival == true`);
+  if (sortOrder === "best-selling" && !searchTerm)
+    conditions.push(`isBestSeller == true`);
+
   // 3. ✨ NEW: Rating Filter Logic
-  if (typeof filters.minRating === 'number' && filters.minRating > 0) {
-     // Check karo ke product ki rating required rating se bari ya barabar ho
-     conditions.push(`rating >= $minRating`);
-     params.minRating = filters.minRating;
+  if (typeof filters.minRating === "number" && filters.minRating > 0) {
+    // Check karo ke product ki rating required rating se bari ya barabar ho
+    conditions.push(`rating >= $minRating`);
+    params.minRating = filters.minRating;
   }
 
   // 4. Existing Standard Filters
-  if (filters.isFeatured === true && !searchTerm) conditions.push(`isFeatured == true`);
-  
+  if (filters.isFeatured === true && !searchTerm)
+    conditions.push(`isFeatured == true`);
+
   if (categorySlug) {
-    conditions.push(`($categorySlug in categories[]->slug.current || $categorySlug in categories[]->parent->slug.current || $categorySlug in categories[]->parent->parent->slug.current)`);
+    conditions.push(
+      `($categorySlug in categories[]->slug.current || $categorySlug in categories[]->parent->slug.current || $categorySlug in categories[]->parent->parent->slug.current)`,
+    );
     params.categorySlug = categorySlug;
   }
   if (searchTerm?.trim()) {
-    conditions.push(`(title match $searchTerm || brand->name match $searchTerm)`);
+    conditions.push(
+      `(title match $searchTerm || brand->name match $searchTerm)`,
+    );
     params.searchTerm = `*${searchTerm.trim()}*`;
   }
   if (filters.brands && filters.brands.length > 0) {
@@ -420,82 +429,108 @@ export const searchProducts = async (
     params.brands = filters.brands;
   }
   if (filters.categories && filters.categories.length > 0) {
-    conditions.push(`count((categories[]->slug.current)[@ in $categories]) > 0`);
+    conditions.push(
+      `count((categories[]->slug.current)[@ in $categories]) > 0`,
+    );
     params.categories = filters.categories;
   }
-  
+
   // 5. Price Filters
-  if (typeof minPrice === 'number') {
+  if (typeof minPrice === "number") {
     variantConditions.push(`coalesce(salePrice, price) >= $minPrice`);
     params.minPrice = minPrice;
   }
-  if (typeof maxPrice === 'number' && maxPrice !== Infinity && maxPrice > 0) {
+  if (typeof maxPrice === "number" && maxPrice !== Infinity && maxPrice > 0) {
     variantConditions.push(`coalesce(salePrice, price) <= $maxPrice`);
     params.maxPrice = maxPrice;
   }
 
   // 6. ✨ NEW: Availability (In Stock) Logic
   if (filters.availability && filters.availability.length > 0) {
-     // Agar user "In Stock" select kare
-     if (filters.availability.includes('in-stock')) {
-        variantConditions.push(`inStock == true`);
-     }
-     // Note: "Out of stock" hum usually show nahi karte unless specifically asked,
-     // lekin agar logic chahiye to yahan else if add kar sakte hain.
+    // Agar user "In Stock" select kare
+    if (filters.availability.includes("in-stock")) {
+      variantConditions.push(`inStock == true`);
+    }
+    // Note: "Out of stock" hum usually show nahi karte unless specifically asked,
+    // lekin agar logic chahiye to yahan else if add kar sakte hain.
   }
 
   // 7. ✨ NEW: Promotions (On Sale) Logic
   if (filters.isOnSale) {
-     // Check karo agar salePrice defined hai aur wo original price se kam hai
-     variantConditions.push(`defined(salePrice) && salePrice < price`);
+    // Check karo agar salePrice defined hai aur wo original price se kam hai
+    variantConditions.push(`defined(salePrice) && salePrice < price`);
   }
 
   // 8. Dynamic Attribute Filters (Colors, Sizes etc)
-  const attributeFilters = Object.entries(filters).filter(([key, values]) => 
-    !['brands', 'isFeatured', 'categories', 'availability', 'isOnSale', 'minRating'].includes(key) && 
-    Array.isArray(values) && values.length > 0
+  const attributeFilters = Object.entries(filters).filter(
+    ([key, values]) =>
+      ![
+        "brands",
+        "isFeatured",
+        "categories",
+        "availability",
+        "isOnSale",
+        "minRating",
+      ].includes(key) &&
+      Array.isArray(values) &&
+      values.length > 0,
   );
-  
+
   attributeFilters.forEach(([key, values]) => {
     const paramName = `${key.toLowerCase()}Values`;
-    variantConditions.push(`count(attributes[lower(name) == "${key.toLowerCase()}" && lower(value) in $${paramName}]) > 0`);
-    params[paramName] = (values as string[]).map(v => v.toLowerCase());
+    variantConditions.push(
+      `count(attributes[lower(name) == "${key.toLowerCase()}" && lower(value) in $${paramName}]) > 0`,
+    );
+    params[paramName] = (values as string[]).map((v) => v.toLowerCase());
   });
 
   // Combine Variant Conditions
   if (variantConditions.length > 0) {
-    conditions.push(`count(variants[${variantConditions.join(' && ')}]) > 0`);
+    conditions.push(`count(variants[${variantConditions.join(" && ")}]) > 0`);
   }
 
   // 9. Final Query Assembly
-  const queryFilter = `*[${conditions.join(' && ')}]`;
-  
-  let ordering = '';
+  const queryFilter = `*[${conditions.join(" && ")}]`;
+
+  let ordering = "";
   switch (sortOrder) {
-    case 'price-low-to-high': ordering = '| order(coalesce(variants[0].salePrice, variants[0].price) asc)'; break;
-    case 'price-high-to-low': ordering = '| order(coalesce(variants[0].salePrice, variants[0].price) desc)'; break;
-    case 'newest': ordering = '| order(_createdAt desc)'; break;
-    case 'best-selling': ordering = '| order(isBestSeller desc, rating desc, reviewCount desc)'; break;
+    case "price-low-to-high":
+      ordering =
+        "| order(coalesce(variants[0].salePrice, variants[0].price) asc)";
+      break;
+    case "price-high-to-low":
+      ordering =
+        "| order(coalesce(variants[0].salePrice, variants[0].price) desc)";
+      break;
+    case "newest":
+      ordering = "| order(_createdAt desc)";
+      break;
+    case "best-selling":
+      ordering = "| order(isBestSeller desc, rating desc, reviewCount desc)";
+      break;
     // New Sort Option for Rating
-    case 'rating-high': ordering = '| order(rating desc)'; break; 
+    case "rating-high":
+      ordering = "| order(rating desc)";
+      break;
     default:
       if (searchTerm?.trim()) {
-        ordering = '| score(boost(title match $searchTerm, 10)) | order(_score desc)';
+        ordering =
+          "| score(boost(title match $searchTerm, 10)) | order(_score desc)";
       } else {
-        ordering = '| order(_createdAt desc)'; 
+        ordering = "| order(_createdAt desc)";
       }
       break;
   }
-  
+
   const start = (page - 1) * PRODUCTS_PER_PAGE;
   const end = page * PRODUCTS_PER_PAGE;
   const pagination = `[${start}...${end}]`;
-  
+
   const finalQuery = groq`{
     "products": ${queryFilter} ${ordering} ${pagination} { ${productFields} },
     "totalCount": count(${queryFilter})
   }`;
-  
+
   const results = await client.fetch(finalQuery, params);
   return results;
 };
@@ -524,7 +559,7 @@ export const searchProducts = async (
 //     sortOrder = 'best-match',
 //     page = 1,
 //   } = options;
-  
+
 //   // // --- DEBUGGING STEP #4: Check the final parameters inside the query function ---
 //   // console.log("--- [DEBUG] Sanity Query: Received options ---", JSON.stringify(options, null, 2));
 //   // // --------------------------------------------------------------------------------
@@ -532,7 +567,6 @@ export const searchProducts = async (
 //   const params: { [key: string]: any } = {};
 //   const conditions: string[] = [`_type == "product"`, `count(variants) > 0`];
 //   const variantConditions: string[] = [];
-
 
 //    // Logic Add karein:
 //   if (campaignSlug) {
@@ -554,7 +588,7 @@ export const searchProducts = async (
 //   if (filters?.isFeatured === true && !searchTerm) {
 //       conditions.push(`isFeatured == true`);
 //   }
-  
+
 //   // Standard Filters
 //   if (categorySlug) {
 //     conditions.push(`($categorySlug in categories[]->slug.current || $categorySlug in categories[]->parent->slug.current || $categorySlug in categories[]->parent->parent->slug.current)`);
@@ -568,7 +602,7 @@ export const searchProducts = async (
 //     conditions.push(`brand->slug.current in $brands`);
 //     params.brands = filters.brands;
 //   }
-  
+
 //   // --- This is where the bug likely is ---
 //   // We will check if this logic is ever reached
 //   if (filters.categories && filters.categories.length > 0) {
@@ -577,7 +611,7 @@ export const searchProducts = async (
 //     params.categories = filters.categories;
 //   }
 //   // ---
-  
+
 //   if (typeof minPrice === 'number') {
 //     variantConditions.push(`coalesce(salePrice, price) >= $minPrice`);
 //     params.minPrice = minPrice;
@@ -599,7 +633,7 @@ export const searchProducts = async (
 //   }
 
 //   const queryFilter = `*[${conditions.join(' && ')}]`;
-  
+
 //   let ordering = '';
 //   switch (sortOrder) {
 //     case 'price-low-to-high': ordering = '| order(coalesce(variants[0].salePrice, variants[0].price) asc)'; break;
@@ -610,15 +644,15 @@ export const searchProducts = async (
 //       if (searchTerm?.trim()) {
 //         ordering = '| score(boost(title match $searchTerm, 10)) | order(_score desc)';
 //       } else {
-//         ordering = '| order(_createdAt desc)'; 
+//         ordering = '| order(_createdAt desc)';
 //       }
 //       break;
 //   }
-  
+
 //   const start = (page - 1) * PRODUCTS_PER_PAGE;
 //   const end = page * PRODUCTS_PER_PAGE;
 //   const pagination = `[${start}...${end}]`;
-  
+
 //   const finalQuery = groq`{
 //     "products": ${queryFilter} ${ordering} ${pagination} { ${productFields} },
 //     "totalCount": count(${queryFilter})
@@ -628,13 +662,11 @@ export const searchProducts = async (
 //   // console.log("--- [DEBUG] Sanity Query: Final GROQ Query ---", finalQuery.replace(/\s+/g, ' '));
 //   // console.log("--- [DEBUG] Sanity Query: Final Params ---", params);
 //   // // -----------------------------------------------------------------------
-  
+
 //   // We remove the filterData part as it's fetched separately now
 //   const results = await client.fetch(finalQuery, params);
 //   return results;
 // };
-
-
 
 export const HERO_CAROUSEL_QUERY = groq`
   *[_type == "heroCarousel"] | order(_createdAt asc) {
@@ -644,14 +676,13 @@ export const HERO_CAROUSEL_QUERY = groq`
   }
 `;
 
-
 // ===============================================
 // === NAYI BLOG QUERIES START HERE ===
 // ===============================================
 
 // Query #1: Saare blog posts fetch karne ke liye (Blog Homepage ke liye)
 export const getAllPosts = async () => {
-    const query = groq`
+  const query = groq`
       *[_type == "post"] | order(publishedAt desc) {
         _id,
         title,
@@ -663,11 +694,11 @@ export const getAllPosts = async () => {
         "authorImage": author->image
       }
     `;
-    return await client.fetch(query);
-}
+  return await client.fetch(query);
+};
 
 export const getSinglePost = async (slug: string) => {
-    const query = groq`
+  const query = groq`
       *[_type == "post" && slug.current == $slug][0] {
         _id,
         title,
@@ -679,8 +710,8 @@ export const getSinglePost = async (slug: string) => {
         "categories": categories[]->{ name, "slug": slug.current }
       }
     `;
-    return await client.fetch(query, { slug });
-}
+  return await client.fetch(query, { slug });
+};
 // --- NEW PAGINATION FUNCTION & QUERY ---
 const POSTS_PER_PAGE = 16; // 9 posts fit nicely in a 3-column grid
 
@@ -689,7 +720,7 @@ export const GET_TOTAL_POST_COUNT = groq`count(*[_type == "post"])`;
 export const getPaginatedPosts = async (page: number = 1) => {
   const start = (page - 1) * POSTS_PER_PAGE;
   const end = page * POSTS_PER_PAGE;
-  
+
   const query = groq`
     *[_type == "post"] | order(publishedAt desc) [${start}...${end}] {
       _id,
@@ -703,7 +734,7 @@ export const getPaginatedPosts = async (page: number = 1) => {
     }
   `;
   return await client.fetch(query);
-}
+};
 
 export const GET_SINGLE_POST_FOR_PAGE = groq`
 *[_type == "post" && slug.current == $slug][0] {
@@ -717,9 +748,9 @@ export const GET_SINGLE_POST_FOR_PAGE = groq`
   excerpt,
   "author": author->{ name, image, bio },
   "categories": categories[]->{ _id, name, "slug": slug.current },
+  "relatedProductSlugs": relatedProductSlugs,
   seo
 }`;
-
 
 export const getProductsByCategoryName = async (categoryName: string) => {
   if (!categoryName) return [];
@@ -735,24 +766,27 @@ export const getProductsByCategoryName = async (categoryName: string) => {
   `;
   const result = await client.fetch(query, { categoryName });
   // Agar category mili to uske products wapis bhejo, warna khali array
-  return result ? result.products : []; 
-}
+  return result ? result.products : [];
+};
 
 // --- Single, Correct Interface for Stock Status ---
 interface StockStatus {
   _id: string;
-  variants: {
-    _key: string;
-    inStock: boolean;
-    stock?: number;
-    price: number;
-    salePrice?: number;
-  }[] | null;
+  variants:
+    | {
+        _key: string;
+        inStock: boolean;
+        stock?: number;
+        price: number;
+        salePrice?: number;
+      }[]
+    | null;
 }
 
-
 // === UPDATED FUNCTION with the correct StockStatus type ===
-export async function getProductsStockStatus(productIds: string[]): Promise<StockStatus[]> {
+export async function getProductsStockStatus(
+  productIds: string[],
+): Promise<StockStatus[]> {
   if (!productIds || productIds.length === 0) {
     return [];
   }
@@ -770,7 +804,6 @@ export async function getProductsStockStatus(productIds: string[]): Promise<Stoc
     return [];
   }
 }
-
 
 // 2. NAYI QUERY for Promo / Story Banners
 export const PROMO_BANNERS_QUERY = groq`*[_type == "promoBanner"] {
@@ -791,7 +824,6 @@ export const INSTAGRAM_QUERY = groq`*[_type == "instagramFeed" && _id == "instag
   }
 }`;
 
-
 export const LIFESTYLE_BANNERS_QUERY = groq`
 *[_type == "lifestyleBanner"] | order(_createdAt asc) {
   _id,
@@ -809,7 +841,7 @@ export const LIFESTYLE_BANNERS_QUERY = groq`
   "mobileVideoFile": mobileVideoFile.asset->url,
   desktopVideoUrl,
   mobileVideoUrl
-}`
+}`;
 // 2. Informational Page Query (For dynamic pages like /about-us)
 export const GET_PAGE_QUERY = groq`
 *[_type == "page" && slug.current == $slug][0] {
@@ -840,10 +872,6 @@ export const GET_FAQ_QUERY = groq`
   seo
 }`;
 
-
-
-
-
 export const COUPON_BANNER_QUERY = groq`
   *[_type == "couponBanner"]{
     _id,
@@ -859,29 +887,35 @@ export const COUPON_BANNER_QUERY = groq`
     objectFit,
     altText
   }
-`
+`;
 
 // src/sanity/lib/queries.ts (UPDATE THIS FUNCTION)
 
-export const getProductsBySlugs = async (slugs: string[]): Promise<SanityProduct[]> => {
-    
-    // === DEBUGGING KE LIYE NAYI LINE ===
-    console.log("DEBUG 2: Sanity se in slugs ke products maange ja rahe hain:", slugs);
-    // ==================================
-    
-    if (!slugs || slugs.length === 0) {
-        return [];
-    }
-    const query = groq`
+export const getProductsBySlugs = async (
+  slugs: string[],
+): Promise<SanityProduct[]> => {
+  // === DEBUGGING KE LIYE NAYI LINE ===
+  console.log(
+    "DEBUG 2: Sanity se in slugs ke products maange ja rahe hain:",
+    slugs,
+  );
+  // ==================================
+
+  if (!slugs || slugs.length === 0) {
+    return [];
+  }
+  const query = groq`
       *[_type == "product" && slug.current in $slugs] {
         ${productFields}
       }
     `;
-    const products = await client.fetch(query, { slugs });
+  const products = await client.fetch(query, { slugs });
 
-    // API se anay wale slugs ki tarteeb barqarar rakhna
-    const sortedProducts = slugs.map(slug => products.find((p: SanityProduct) => p.slug === slug)).filter(Boolean) as SanityProduct[];
-    return sortedProducts;
+  // API se anay wale slugs ki tarteeb barqarar rakhna
+  const sortedProducts = slugs
+    .map((slug) => products.find((p: SanityProduct) => p.slug === slug))
+    .filter(Boolean) as SanityProduct[];
+  return sortedProducts;
 };
 // === NEW FUNCTION FOR INFINITE SCROLL ===
 export const getPaginatedProducts = async (page: number, limit: number) => {
@@ -905,7 +939,7 @@ export const FLASH_SALE_QUERY = groq`
   "products": products[]->{
     ${productFields} // Wahi purana, behtareen product fragment
   }
-}`
+}`;
 export const getSearchSuggestions = async () => {
   const query = groq`
     *[_type == "settings" && _id == "settings"][0] {
@@ -963,39 +997,41 @@ export const GET_DEALS_PLP_DATA = groq`{
   )
 }`;
 
-
-
 // --- NAYA, BEHTAR FUNCTION FILTER DATA KE LIYE ---
 export const GET_FILTER_DATA_FOR_PLP = async (
-  options: { 
+  options: {
     searchTerm?: string;
     categorySlug?: string;
     sortOrder?: string;
     isFeatured?: boolean;
-  } = {}
+  } = {},
 ) => {
-    const { searchTerm, categorySlug, sortOrder, isFeatured } = options;
+  const { searchTerm, categorySlug, sortOrder, isFeatured } = options;
 
-    const params: { [key: string]: any } = {};
-    const conditions: string[] = [`_type == "product"`, `count(variants) > 0`];
+  const params: { [key: string]: any } = {};
+  const conditions: string[] = [`_type == "product"`, `count(variants) > 0`];
 
-    // Bilkul wahi conditions jo searchProducts mein hain
-    if (sortOrder === 'newest') conditions.push(`isNewArrival == true`);
-    if (sortOrder === 'best-selling') conditions.push(`isBestSeller == true`);
-    if (isFeatured) conditions.push(`isFeatured == true`);
-    
-    if (categorySlug) {
-      conditions.push(`($categorySlug in categories[]->slug.current || $categorySlug in categories[]->parent->slug.current || $categorySlug in categories[]->parent->parent->slug.current)`);
-      params.categorySlug = categorySlug;
-    }
-    if (searchTerm?.trim()) {
-      conditions.push(`(title match $searchTerm || brand->name match $searchTerm)`);
-      params.searchTerm = `*${searchTerm.trim()}*`;
-    }
+  // Bilkul wahi conditions jo searchProducts mein hain
+  if (sortOrder === "newest") conditions.push(`isNewArrival == true`);
+  if (sortOrder === "best-selling") conditions.push(`isBestSeller == true`);
+  if (isFeatured) conditions.push(`isFeatured == true`);
 
-    const queryFilter = `*[${conditions.join(' && ')}]`;
+  if (categorySlug) {
+    conditions.push(
+      `($categorySlug in categories[]->slug.current || $categorySlug in categories[]->parent->slug.current || $categorySlug in categories[]->parent->parent->slug.current)`,
+    );
+    params.categorySlug = categorySlug;
+  }
+  if (searchTerm?.trim()) {
+    conditions.push(
+      `(title match $searchTerm || brand->name match $searchTerm)`,
+    );
+    params.searchTerm = `*${searchTerm.trim()}*`;
+  }
 
-    const filterQuery = groq`{
+  const queryFilter = `*[${conditions.join(" && ")}]`;
+
+  const filterQuery = groq`{
       "brands": array::unique(${queryFilter}.brand->{
          _id, name, "slug": slug.current
       }),
@@ -1007,10 +1043,9 @@ export const GET_FILTER_DATA_FOR_PLP = async (
         "max": math::max(${queryFilter}.variants[].price)
       }
     }`;
-    
-    return await client.fetch(filterQuery, params);
-}
 
+  return await client.fetch(filterQuery, params);
+};
 
 // === NEW QUERY FOR COUPON VERIFICATION (No changes, but keep it here) ===
 export const GET_COUPON_BY_CODE = groq`
@@ -1049,18 +1084,18 @@ export const GET_SHIPPING_RULES = groq`
 
 // === UPDATED HELPER FUNCTION TO FETCH THE RULES ===
 export async function getShippingRules(): Promise<ShippingRule[]> {
-    try {
-        const result = await client.fetch(GET_SHIPPING_RULES);
-        if (!result || !result.shippingRules) return [];
-        const sortedRules = result.shippingRules.sort((a: ShippingRule, b: ShippingRule) => b.minAmount - a.minAmount);
-        return sortedRules;
-    } catch (error) {
-        console.error("Failed to fetch shipping rules from Sanity:", error);
-        return [];
-    }
+  try {
+    const result = await client.fetch(GET_SHIPPING_RULES);
+    if (!result || !result.shippingRules) return [];
+    const sortedRules = result.shippingRules.sort(
+      (a: ShippingRule, b: ShippingRule) => b.minAmount - a.minAmount,
+    );
+    return sortedRules;
+  } catch (error) {
+    console.error("Failed to fetch shipping rules from Sanity:", error);
+    return [];
+  }
 }
-
-
 
 // =========================================================
 // === UPDATED SETTINGS QUERY & TYPE ===
@@ -1082,7 +1117,7 @@ export interface GlobalSettings {
   secondaryNavLinks?: {
     label: string;
     url: string;
-    position: 'left' | 'right';
+    position: "left" | "right";
     isHighlight: boolean;
   }[];
   // ============================
@@ -1121,10 +1156,10 @@ const GET_GLOBAL_SETTINGS_QUERY = groq`
 export const getGlobalSettings = cache(async (): Promise<GlobalSettings> => {
   try {
     const settings = await client.fetch(GET_GLOBAL_SETTINGS_QUERY);
-    return settings || {}; 
+    return settings || {};
   } catch (error) {
     console.error("Failed to fetch global settings:", error);
-    return {}; 
+    return {};
   }
 });
 // =========================================================
@@ -1153,74 +1188,100 @@ export const GET_BREADCRUMB_PATH_QUERY = groq`
  * @param slug - The slug of the product or category. Not needed for static pages.
  * @returns A promise that resolves to an array of BreadcrumbItem objects.
  */
-export const getBreadcrumbs = cache(async (
- type: 'product' | 'category' | 'page' | 'deals' | 'search' | 'blog' | 'contact-us' | 'faq', 
-  slug?: string
-): Promise<BreadcrumbItem[]> => {
-  const breadcrumbs: BreadcrumbItem[] = [{ name: 'Home', href: '/' }];
-  
-  try {
-    if ((type === 'product' || type === 'category') && slug) {
-      // For products, find their primary category first. For categories, use the slug directly.
-      const categorySlugQuery = type === 'product'
-        ? groq`*[_type == 'product' && slug.current == $slug][0]{ "categorySlug": categories[0]->slug.current }`
-        : groq`*[_type == 'category' && slug.current == $slug][0]{ "categorySlug": slug.current }`;
-      
-      const result = await client.fetch<{ categorySlug: string }>(categorySlugQuery, { slug });
-      
-      if (result?.categorySlug) {
-        const pathData = await client.fetch<{ path: { name: string, slug: string }[] }>(GET_BREADCRUMB_PATH_QUERY, { slug: result.categorySlug });
+export const getBreadcrumbs = cache(
+  async (
+    type:
+      | "product"
+      | "category"
+      | "page"
+      | "deals"
+      | "search"
+      | "blog"
+      | "contact-us"
+      | "faq",
+    slug?: string,
+  ): Promise<BreadcrumbItem[]> => {
+    const breadcrumbs: BreadcrumbItem[] = [{ name: "Home", href: "/" }];
 
-        if (pathData?.path) {
-          // The query returns a sparse array with nulls for non-existent parents.
-          // Filter out the nulls and map the valid categories to our breadcrumb structure.
-          pathData.path.filter(Boolean).forEach(crumb => {
-            breadcrumbs.push({
-              name: crumb.name,
-              href: `/category/${crumb.slug}`,
+    try {
+      if ((type === "product" || type === "category") && slug) {
+        // For products, find their primary category first. For categories, use the slug directly.
+        const categorySlugQuery =
+          type === "product"
+            ? groq`*[_type == 'product' && slug.current == $slug][0]{ "categorySlug": categories[0]->slug.current }`
+            : groq`*[_type == 'category' && slug.current == $slug][0]{ "categorySlug": slug.current }`;
+
+        const result = await client.fetch<{ categorySlug: string }>(
+          categorySlugQuery,
+          { slug },
+        );
+
+        if (result?.categorySlug) {
+          const pathData = await client.fetch<{
+            path: { name: string; slug: string }[];
+          }>(GET_BREADCRUMB_PATH_QUERY, { slug: result.categorySlug });
+
+          if (pathData?.path) {
+            // The query returns a sparse array with nulls for non-existent parents.
+            // Filter out the nulls and map the valid categories to our breadcrumb structure.
+            pathData.path.filter(Boolean).forEach((crumb) => {
+              breadcrumbs.push({
+                name: crumb.name,
+                href: `/category/${crumb.slug}`,
+              });
             });
-          });
+          }
         }
-      }
-      
-      // If it's a product, add its own title at the end (without a link).
-      if (type === 'product') {
-        const productTitle = await client.fetch<{ title: string }>(groq`*[_type == 'product' && slug.current == $slug][0]{ title }`, { slug });
-        if (productTitle) {
-          breadcrumbs.push({ name: productTitle.title, href: `/product/${slug}` });
-        }
-      }
 
-    } else if (type === 'page' && slug) {
-        const pageTitle = await client.fetch<string>(groq`*[_type == 'page' && slug.current == $slug][0].title`, { slug });
-        if(pageTitle) breadcrumbs.push({ name: pageTitle, href: `/${slug}` });
-    
-    // --- BUG FIX IS HERE ---
-    // Handle specific, named static pages directly.
-    } else if (type === 'contact-us') {
-        breadcrumbs.push({ name: 'Contact Us', href: '/contact-us' });
-    } else if (type === 'deals') {
-        breadcrumbs.push({ name: 'Deals', href: '/deals' });
-    } else if (type === 'faq') {
-        breadcrumbs.push({ name: 'FAQ', href: '/faq' });
-    } else if (type === 'search') {
-        breadcrumbs.push({ name: 'Search Results', href: '/search' });
-    } else if (type === 'blog') {
-        breadcrumbs.push({ name: 'Blog', href: '/blog' });
-        if (slug) {
-            const postTitle = await client.fetch<string>(groq`*[_type == 'post' && slug.current == $slug][0].title`, { slug });
-            if (postTitle) breadcrumbs.push({ name: postTitle, href: `/blog/${slug}` });
+        // If it's a product, add its own title at the end (without a link).
+        if (type === "product") {
+          const productTitle = await client.fetch<{ title: string }>(
+            groq`*[_type == 'product' && slug.current == $slug][0]{ title }`,
+            { slug },
+          );
+          if (productTitle) {
+            breadcrumbs.push({
+              name: productTitle.title,
+              href: `/product/${slug}`,
+            });
+          }
         }
+      } else if (type === "page" && slug) {
+        const pageTitle = await client.fetch<string>(
+          groq`*[_type == 'page' && slug.current == $slug][0].title`,
+          { slug },
+        );
+        if (pageTitle) breadcrumbs.push({ name: pageTitle, href: `/${slug}` });
+
+        // --- BUG FIX IS HERE ---
+        // Handle specific, named static pages directly.
+      } else if (type === "contact-us") {
+        breadcrumbs.push({ name: "Contact Us", href: "/contact-us" });
+      } else if (type === "deals") {
+        breadcrumbs.push({ name: "Deals", href: "/deals" });
+      } else if (type === "faq") {
+        breadcrumbs.push({ name: "FAQ", href: "/faq" });
+      } else if (type === "search") {
+        breadcrumbs.push({ name: "Search Results", href: "/search" });
+      } else if (type === "blog") {
+        breadcrumbs.push({ name: "Blog", href: "/blog" });
+        if (slug) {
+          const postTitle = await client.fetch<string>(
+            groq`*[_type == 'post' && slug.current == $slug][0].title`,
+            { slug },
+          );
+          if (postTitle)
+            breadcrumbs.push({ name: postTitle, href: `/blog/${slug}` });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to generate breadcrumbs:", error);
+      return [{ name: "Home", href: "/" }];
     }
 
-  } catch (error) {
-    console.error("Failed to generate breadcrumbs:", error);
-    return [{ name: 'Home', href: '/' }];
-  }
-
-  return breadcrumbs;
-});
-
+    return breadcrumbs;
+  },
+);
 
 // =========================================================
 // === NEW ADMIN-SPECIFIC QUERIES START HERE ===
@@ -1293,7 +1354,6 @@ export const GET_SINGLE_PRODUCT_FOR_EDIT_QUERY = groq`
 
 // === (The rest of the file, including getGlobalSettings and getBreadcrumbs, remains unchanged) ===
 
-
 // --- SUMMARY OF CHANGES ---
 // - **Centralized Queries (Rule #4):** Moved all GROQ queries from `productActions.ts` into this central file.
 // - **`GET_PAGINATED_ADMIN_PRODUCTS_QUERY`:** Created a new exported constant for fetching the list of products for the admin panel, including the powerful search logic.
@@ -1335,7 +1395,7 @@ export const GET_SINGLE_PRODUCT_FOR_EDIT_QUERY = groq`
 //         backgroundStyle,
 //         enableTimer,
 //         endTime,
-        
+
 //         // Side Banner Support
 //         showSideBanner,
 //         sideBanner {
@@ -1370,24 +1430,24 @@ export const GET_SINGLE_PRODUCT_FOR_EDIT_QUERY = groq`
 
 //       // === C. PRODUCT SHOWCASE (Row) ===
 //       _type == 'productShowcase' => {
-//           title, type, 
+//           title, type,
 //           manualProducts[]->{ ${productFields} },
-//           showSideBanner, 
+//           showSideBanner,
 //           sideBanner { "image": image.asset->url, link }
 //       },
 
 //       // === D. CATEGORY CAROUSEL (Circles) ===
 //       _type == 'categoryShowcase' => {
-//           title, 
+//           title,
 //           categories[]->{ _id, name, "slug": slug.current, "image": image.asset->url }
 //       },
 
 //       // === E. CATEGORY GRID (Bento) ===
 //       _type == 'categoryGrid' => {
-//           title, 
-//           items[]{ 
-//             discountText, 
-//             category->{ _id, name, "slug": slug.current, "image": image.asset->url } 
+//           title,
+//           items[]{
+//             discountText,
+//             category->{ _id, name, "slug": slug.current, "image": image.asset->url }
 //           }
 //       },
 
@@ -1415,10 +1475,10 @@ export const GET_SINGLE_PRODUCT_FOR_EDIT_QUERY = groq`
 //     // --- LEGACY DATA (BACKUP) ---
 //     "featuredProductsTitle": "Featured Products",
 //     "featuredProducts": *[_type == "product" && isFeatured == true] | order(_createdAt desc)[0...12] { ${productFields} },
-    
+
 //     "bestSellersTitle": "Best Sellers",
 //     "bestSellers": *[_type == "product" && isBestSeller == true] | order(rating desc, reviewCount desc)[0...12]{ ${productFields} },
-    
+
 //     "newArrivalsTitle": "New Arrivals",
 //     "newArrivals": *[_type == "product"] | order(_createdAt desc)[0...12]{ ${productFields} },
 
@@ -1599,9 +1659,9 @@ export const HOMEPAGE_DATA_QUERY = groq`{
 
 //       // === C. PRODUCT SHOWCASE ===
 //       _type == 'productShowcase' => {
-//           title, type, 
+//           title, type,
 //           manualProducts[]->{ ${productFields} },
-//           showSideBanner, 
+//           showSideBanner,
 //           sideBanner { "image": image.asset->url, link },
 
 //           // Auto Fetch Logic for Product Showcase
@@ -1612,13 +1672,13 @@ export const HOMEPAGE_DATA_QUERY = groq`{
 
 //       // === D. CATEGORY CAROUSEL ===
 //       _type == 'categoryShowcase' => {
-//           title, 
+//           title,
 //           categories[]->{ _id, name, "slug": slug.current, "image": image.asset->url }
 //       },
 
 //       // === E. CATEGORY GRID ===
 //       _type == 'categoryGrid' => {
-//           title, 
+//           title,
 //           items[]{ discountText, category->{ _id, name, "slug": slug.current, "image": image.asset->url } }
 //       },
 
@@ -1666,9 +1726,6 @@ export const HOMEPAGE_DATA_QUERY = groq`{
 //         }
 //     }
 // }`;
-
-
-
 
 // === 1. FETCH ALL ACTIVE CAMPAIGNS ===
 export const GET_ALL_CAMPAIGNS = groq`

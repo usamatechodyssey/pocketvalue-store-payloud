@@ -1,37 +1,16 @@
 import { type SchemaTypeDefinition } from 'sanity'
-import product from '../schemas/product'
-import category from '../schemas/category'
-import heroCarousel from '../schemas/heroCarousel'
-import homepage from '../schemas/homepage'
-import productVariant from '../schemas/productVariant'
-import variantAttribute from '../schemas/variantAttribute'
-import review from '../schemas/review'
+
 import post from '../schemas/post'
 import author from '../schemas/author'
-import blockContent from '../schemas/blockContent'
-import promoBanner from '../schemas/promoBanner'
-import instagramSection from '../schemas/instagramSection'
-import lifestyleBanner from '../schemas/lifestyleBanner'
-import Information_page from '../schemas/Information_page'
-import faq from '../schemas/faq'
-import brand from '../schemas/brand'
-import couponBanner from '../schemas/couponBanner'
-import featuredCategory from '../schemas/featuredCategory'
+
 import settings from '../schemas/settings'
-import coupon from '../schemas/coupon'
+
 import seo from '../schemas/seo'
-import campaign from '../schemas/campaign'
-import dealSection from '../schemas/objects/dealSection'
-import bannerSection from '../schemas/objects/bannerSection'
-import categoryGrid from '../schemas/objects/categoryGrid'
-import categoryShowcase from '../schemas/objects/categoryShowcase'
-import productShowcase from '../schemas/objects/productShowcase'
-import brandSection from '../schemas/objects/brandSection'
-import couponSection from '../schemas/objects/couponSection'
-import layoutSection from '../schemas/objects/layoutSection'
+
+
 
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [product,category,heroCarousel,homepage,productVariant,variantAttribute,review,post,author,blockContent,promoBanner,instagramSection,lifestyleBanner,Information_page,faq,brand,couponBanner,featuredCategory,settings,coupon,seo,campaign,dealSection,bannerSection,categoryGrid,categoryShowcase,productShowcase,brandSection,couponSection,layoutSection],
+  types: [post, author, settings, seo],
 }
 

@@ -1,22 +1,24 @@
-
-// app/(pages)/[slug]/page.tsx
-
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { PortableText } from "@portabletext/react";
 
-import { client } from "@/sanity/lib/client";
+// import { client } from "@/sanity/lib/client";
 import { urlFor } from "@/sanity/lib/image";
 import { generateBaseMetadata } from "@/utils/metadata";
-import { GET_PAGE_DATA, getBreadcrumbs } from "@/sanity/lib/queries";
+
+// ✅ NEW PAYLOAD IMPORTS
+import { getPayloadPageData } from "@/sanity/lib/payload/content.queries";
+import { getPayloadBreadcrumbs } from "@/sanity/lib/payload/category.queries"; 
 import Breadcrumbs from "@/app/components/ui/Breadcrumbs";
 
+// 🔥 FIX: Interface ab use hogi
 interface PageData {
   _id: string;
   title: string;
   slug: string;
   body: any;
+  subtitle?: string | null; // ✅ Null bhi allow kiya taake DB se match kare
   excerpt?: string;
   seo?: {
     metaTitle?: string;
@@ -39,7 +41,9 @@ export async function generateMetadata({
   params: paramsPromise,
 }: InfoPageProps) {
   const { slug } = await paramsPromise;
-  const page = await client.fetch<PageData | null>(GET_PAGE_DATA, { slug });
+  
+  // 🔥 FIX 1: Yahan 'as PageData | null' lagaya hai
+  const page = await getPayloadPageData(slug) as PageData | null;
 
   if (!page) {
     return {};
@@ -141,8 +145,9 @@ export default async function InfoPage(props: InfoPageProps) {
 
   // --- FETCH ALL DATA CONCURRENTLY ---
   const [pageData, breadcrumbs] = await Promise.all([
-    client.fetch<PageData | null>(GET_PAGE_DATA, { slug }),
-    getBreadcrumbs("page", slug),
+    // 🔥 FIX 2: Yahan bhi 'as Promise<PageData | null>' lagaya
+    getPayloadPageData(slug) as Promise<PageData | null>,
+    getPayloadBreadcrumbs("page", slug),
   ]);
 
   if (!pageData) {
@@ -151,33 +156,27 @@ export default async function InfoPage(props: InfoPageProps) {
 
   return (
     <main className="w-full bg-white dark:bg-gray-900">
-      {/* 1. NEW HEADER SECTION (Copied from FAQ/Contact-Us - ONLY TITLE) */}
+      {/* 1. NEW HEADER SECTION */}
       <div className="bg-gray-50 dark:bg-gray-800/50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             {pageData.title}
           </h1>
-          {/* DESCRIPTION (EXCERPT) REMOVED FROM HERE as per your request. */}
+          {/* Subtitle Display */}
+          {pageData.subtitle && (
+            <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-400 font-medium">
+              {pageData.subtitle}
+            </p>
+          )}
         </div>
       </div>
 
       {/* 2. MAIN CONTENT SECTION */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <article className="max-w-4xl mx-auto">
-          {/* Breadcrumbs is here */}
           <div className="mb-8">
             <Breadcrumbs crumbs={breadcrumbs} />
           </div>
-
-          {/* 3. ORIGINAL HEADER SECTION IS COMPLETELY REMOVED as Title is now in the new block.
-          
-          <header className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-              {pageData.title}
-            </h1>
-          </header> 
-          
-          */}
 
           <div className="prose prose-lg lg:prose-xl max-w-none dark:prose-invert">
             <PortableText value={pageData.body} components={ptComponents} />

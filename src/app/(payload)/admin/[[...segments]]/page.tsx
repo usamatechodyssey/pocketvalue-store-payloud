@@ -1,35 +1,16 @@
-import type { Metadata } from 'next'
+//[[...segments]] is a catch-all route in Next.js that captures all segments of the URL after /admin. This allows us to handle dynamic routing for the admin interface of Payload CMS. The RootPage component from Payload CMS will render the appropriate view based on the URL segments and the configuration provided.
+import config from '@payload-config'
 import { RootPage, generatePageMetadata } from '@payloadcms/next/views'
-import { ImportMap } from 'payload'
-
-// ✅ Alias use kar rahe hain
-import configPromise from '@payload-config'
-
-const importMap: ImportMap = {}
+import { importMap } from '../importMap'
 
 type Args = {
-  params: Promise<{
-    segments: string[]
-  }>
-  searchParams: Promise<{
-    [key: string]: string | string[]
-  }>
+  params: Promise<{ segments: string[] }>
+  searchParams: Promise<{ [key: string]: string | string[] }>
 }
 
-export const generateMetadata = ({ params, searchParams }: Args): Promise<Metadata> =>
-  generatePageMetadata({ config: configPromise, params, searchParams })
+export const generateMetadata = ({ params, searchParams }: Args) =>
+  generatePageMetadata({ config, params, searchParams })
 
-const Page = async ({ params, searchParams }: Args) => {
-  // 1. Pehle hum wait karte hain taake config load ho jaye (Crash Fix)
-  const resolvedConfig = await configPromise
-
-  return RootPage({
-    // 2. Phir hum usse wapis Promise bana kar pass karte hain (Type Error Fix)
-    config: Promise.resolve(resolvedConfig), 
-    params,
-    searchParams,
-    importMap,
-  })
+export default async function Page({ params, searchParams }: Args) {
+  return <RootPage config={config} params={params} searchParams={searchParams} importMap={importMap} />
 }
-
-export default Page

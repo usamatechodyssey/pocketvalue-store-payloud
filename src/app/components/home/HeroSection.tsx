@@ -1,23 +1,52 @@
+// //HeroSection.tsx
 // import { client } from "@/sanity/lib/client";
 // import { HERO_CAROUSEL_QUERY } from "@/sanity/lib/queries";
 // import HeroCarousel from "./HeroCarousel";
 
 // export default async function HeroSection() {
-//   // Data Fetching Server Side par hogi
+//   // Data fetch server side par hoga
 //   const banners = await client.fetch(HERO_CAROUSEL_QUERY);
+
+//   // Agar banners nahi hain to section render hi na ho (Layout shift se bachne ke liye)
+//   if (!banners || banners.length === 0) return null;
 
 //   return <HeroCarousel banners={banners} />;
 // }
-import { client } from "@/sanity/lib/client";
-import { HERO_CAROUSEL_QUERY } from "@/sanity/lib/queries";
+import { getPayload } from "payload";
+import configPromise from "@payload-config";
 import HeroCarousel from "./HeroCarousel";
+import { HeroCarouselSlide } from "@/sanity/types/product_types"; 
+
+// 🛑 OLD SANITY IMPORTS (Commented)
+// import { client } from "@/sanity/lib/client";
+// import { HERO_CAROUSEL_QUERY } from "@/sanity/lib/queries";
 
 export default async function HeroSection() {
-  // Data fetch server side par hoga
-  const banners = await client.fetch(HERO_CAROUSEL_QUERY);
+  
+  // ✅ NEW PAYLOAD FETCH
+  const payload = await getPayload({ config: configPromise });
+  
+  const result = await payload.find({
+    collection: 'heroCarousel',
+    sort: 'createdAt',
+    // 🔥 FIX: Limit ko 0 kar diya, iska matlab hai "Sab le aao", ya 'pagination: false' bhi likh sakte hain
+    pagination: false, // 10 ki pabandi khatam!
+    depth: 1, 
+  });
 
-  // Agar banners nahi hain to section render hi na ho (Layout shift se bachne ke liye)
-  if (!banners || banners.length === 0) return null;
+  if (!result.docs || result.docs.length === 0) return null;
+
+  // Map Payload data to match frontend interface
+  const banners: HeroCarouselSlide[] = result.docs.map((doc: any) => ({
+    _id: doc.id,
+    title: doc.title,
+    subtitle: doc.subtitle || undefined,
+    buttonText: doc.buttonText,
+    link: doc.link,
+    // Safely extract URLs from the populated media objects
+    desktopImage: doc.desktopImage?.url || '',
+    mobileImage: doc.mobileImage?.url || '',
+  }));
 
   return <HeroCarousel banners={banners} />;
 }

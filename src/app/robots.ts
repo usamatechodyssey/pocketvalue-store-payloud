@@ -1,33 +1,35 @@
-// /src/app/robots.ts
-
 import { MetadataRoute } from 'next';
 
 /**
- * Generates the robots.txt file for the site.
- * This file tells search engine crawlers which pages or files the crawler
- * can or can't request from your site.
+ * 🤖 ROBOTS.TXT GENERATOR
+ * This file controls search engine crawlers (Google, Bing, etc.) access.
+ * We are blocking all administrative, private, and transactional routes.
  */
 export default function robots(): MetadataRoute.Robots {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
+  // Safety Check: Deployment ke waqt baseUrl ka hona zaroori hai
   if (!baseUrl) {
-    throw new Error("Missing NEXT_PUBLIC_BASE_URL environment variable. It's required for a production robots.txt.");
+    console.warn("Missing NEXT_PUBLIC_BASE_URL. robots.txt might generate relative paths.");
   }
 
   return {
     rules: [
       {
-        userAgent: '*', // Applies to all user-agents (all crawlers)
-        allow: '/',     // Allow crawling of all content by default
+        userAgent: '*', // Sab crawlers ke liye aik hi rule
+        allow: '/',     // Baqi mukkamal website allowed hai
         
-        // Disallow crawling of specific private, sensitive, or low-value routes.
-        // This list is now comprehensive based on all files we have reviewed.
+        // 🚫 DISALLOW LIST (Private & Admin Routes)
         disallow: [
-          '/Bismillah786/',       // Admin panel
-          '/account/',           // All user account pages
-          '/api/',               // Disallow all API routes
+          // 1. Admin Panels
+          '/admin/',         // Payload CMS Admin
+          '/studio/',        // Sanity Studio (agar future mein use hua toh)
           
-          // Auth & User Flow
+          // 2. User Accounts & Privacy
+          '/account/',       // Customer Dashboard
+          '/api/',           // Backend API Routes
+          
+          // 3. Auth Flow (No need to index login pages)
           '/login',
           '/register',
           '/forgot-password',
@@ -36,24 +38,20 @@ export default function robots(): MetadataRoute.Robots {
           '/verify-phone',
           '/access-denied',
 
-          // E-commerce Flow
+          // 4. E-commerce Transactional Pages
           '/cart',
           '/checkout/',
           '/wishlist',
           '/order-failure',
           '/order-success/',
 
-          // Low-value or "Coming Soon" pages
+          // 5. Temporary or Low-Value Pages
           '/gift-cards',
           '/sell',
         ],
       },
     ],
-    // Point crawlers to the location of the sitemap
-    sitemap: `${baseUrl}/sitemap.xml`,
+    // 🗺️ Sitemap Link: Crawlers ko batana ke sitemap kahan hai
+    sitemap: `${baseUrl || ''}/sitemap.xml`,
   };
 }
-
-// --- SUMMARY OF CHANGES ---
-// - This file is the final, comprehensive version.
-// - The `disallow` array has been updated to include all private and transactional routes we have identified, such as `/cart`, `/checkout/`, `/verify-email`, and `/verify-phone`, ensuring complete crawler control.

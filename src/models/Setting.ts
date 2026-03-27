@@ -1,10 +1,10 @@
-// /src/models/Setting.ts
+// src/models/Setting.ts
 
 import mongoose, { Schema, Document } from 'mongoose';
 
-// Interface for the credentials object within a gateway
-// This can be flexible to accommodate different gateways
-interface IGatewayCredentials {
+// ✅ FIXED INTERFACE: Index Signature add kiya aur extra line remove ki
+export interface IGatewayCredentials { // Export kiya taake baqi files use kar saken
+  [key: string]: string | undefined; // <--- YEH HAI ASAL FIX! Allows dynamic key access
   bankName?: string;
   accountTitle?: string;
   accountNumber?: string;
@@ -17,11 +17,11 @@ interface IGatewayCredentials {
 }
 
 // Interface for a single gateway object in the array
-export interface IGateway {
+export interface IGateway { // Exported for consistent use across components
   key: string;
   name: string;
   enabled: boolean;
-  credentials: IGatewayCredentials;
+  credentials?: IGatewayCredentials; // credentials optional bhi ho sakte hain
 }
 
 // Interface for the main settings document

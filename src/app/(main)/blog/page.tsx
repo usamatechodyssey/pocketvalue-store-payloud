@@ -179,18 +179,6 @@ export default async function BlogPage({
             <Breadcrumbs crumbs={breadcrumbs} />
           </div>
 
-          {/* ORIGINAL HEADER REMOVED:
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              The PocketValue Blog
-            </h1>
-            <p className="mt-4 max-w-3xl mx-auto text-lg text-gray-600 dark:text-gray-300">
-              Insights, tips, and stories from our team to help you get the best
-              value.
-            </p>
-          </div>
-          */}
-
           {posts && posts.length > 0 ? (
             <div className="space-y-12">
               {featuredPost && (

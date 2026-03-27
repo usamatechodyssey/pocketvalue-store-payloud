@@ -1,5 +1,4 @@
-// app/blog/[slug]/page.tsx
-
+// This is the page component for displaying a single blog post. It fetches the post data from Sanity based on the slug, generates metadata for SEO, and renders the post content using Portable Text. It also includes structured data for better search engine understanding and a section to display related products fetched from Payload CMS based on slugs defined in Sanity.
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,6 +11,12 @@ import {
   GET_SINGLE_POST_FOR_PAGE,
   getBreadcrumbs,
 } from "@/sanity/lib/queries";
+import SanityProduct from "@/sanity/types/product_types";
+
+// ✅ NEW PAYLOAD IMPORTS
+import { getPayloadProductsBySlugs } from "@/sanity/lib/payload/product.queries";
+import ProductSectionWithBanner from "@/app/components/home/ProductCarousel"; // Existing Carousel
+
 import { Post } from "@/sanity/types/product_types";
 import { urlFor } from "@/sanity/lib/image";
 import { generateBaseMetadata } from "@/utils/metadata";
@@ -21,14 +26,13 @@ type SinglePostPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-// --- generateMetadata function (unchanged) ---
 export async function generateMetadata({
   params: paramsPromise,
 }: SinglePostPageProps) {
   const { slug } = await paramsPromise;
   const post = await client.fetch<Post & { seo?: any }>(
     GET_SINGLE_POST_FOR_PAGE,
-    { slug }
+    { slug },
   );
   if (!post) return {};
   return generateBaseMetadata({
@@ -47,7 +51,6 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// --- UPDATED Portable Text Components for New Layout ---
 const portableTextComponents: Partial<PortableTextReactComponents> = {
   types: {
     image: ({ value }) => (
@@ -98,9 +101,12 @@ export default async function SinglePostPage({
 }: SinglePostPageProps) {
   const { slug } = await paramsPromise;
 
-  // --- FETCH ALL DATA CONCURRENTLY ---
+  // 1. Fetch Blog from Sanity (Including the new relatedProductSlugs field)
   const [post, globalSettings, breadcrumbs] = await Promise.all([
-    client.fetch<Post>(GET_SINGLE_POST_FOR_PAGE, { slug }),
+    client.fetch<Post & { relatedProductSlugs?: string[] }>(
+      GET_SINGLE_POST_FOR_PAGE,
+      { slug },
+    ),
     getGlobalSettings(),
     getBreadcrumbs("blog", slug),
   ]);
@@ -108,7 +114,15 @@ export default async function SinglePostPage({
   if (!post) {
     notFound();
   }
-  // --- BlogPosting JSON-LD Schema Generation ---
+
+  // 🔥 2. FETCH RELATED PRODUCTS FROM PAYLOAD (New Logic)
+  // 🔥 FIX: Explicitly define the type here
+  let linkedProducts: SanityProduct[] = [];
+  if (post.relatedProductSlugs && post.relatedProductSlugs.length > 0) {
+    // Slugs ka array use karke Payload se data fetch karna
+    linkedProducts = await getPayloadProductsBySlugs(post.relatedProductSlugs);
+  }
+
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
   const blogPostingSchema = {
     "@context": "https://schema.org",
@@ -151,9 +165,7 @@ export default async function SinglePostPage({
             <Breadcrumbs crumbs={breadcrumbs} />
           </div>
 
-          {/* --- UPDATED GRID LAYOUT --- */}
           <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-12 xl:gap-16">
-            {/* --- LEFT (STICKY) COLUMN - NOW WIDER --- */}
             <aside className="lg:col-span-5">
               <div className="lg:sticky lg:top-24 space-y-6">
                 <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight">
@@ -172,24 +184,20 @@ export default async function SinglePostPage({
                   ))}
                 </div>
 
-                {/* --- UPDATED FEATURED IMAGE --- */}
-                {/* Removed aspect ratio and object-cover to show the full image */}
                 <div className="w-full rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-800">
                   <Image
                     src={urlFor(post.mainImage).width(800).url()}
                     alt={post.title}
                     width={800}
-                    height={800} // Height can be adjusted, but width drives the responsiveness
+                    height={800}
                     priority
-                    className="w-full h-auto" // Ensures image scales correctly without cropping
+                    className="w-full h-auto"
                   />
                 </div>
               </div>
             </aside>
 
-            {/* --- RIGHT (SCROLLABLE) COLUMN --- */}
             <article className="lg:col-span-7 mt-8 lg:mt-0">
-              {/* Author & Date Info */}
               <div className="flex items-center gap-6 mb-8 pb-6 border-b border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-3">
                   {post.author?.image ? (
@@ -222,7 +230,6 @@ export default async function SinglePostPage({
                 </div>
               </div>
 
-              {/* Main Article Content */}
               <div className="prose prose-lg lg:prose-xl max-w-none dark:prose-invert prose-p:text-gray-600 dark:prose-p:text-gray-300">
                 {post.body && (
                   <PortableText
@@ -233,16 +240,18 @@ export default async function SinglePostPage({
               </div>
             </article>
           </div>
+
+          {/* 🔥 3. SHOW LINKED PAYLOAD PRODUCTS (New Section at the Bottom) */}
+          {linkedProducts.length > 0 && (
+            <div className="mt-16 md:mt-24 pt-12 border-t border-gray-100 dark:border-gray-800">
+              <ProductSectionWithBanner
+                title="Products Mentioned in this Story"
+                products={linkedProducts}
+              />
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
-
-// --- SUMMARY OF CHANGES ---
-// - **Complete Redesign:** The entire component structure has been refactored into a full-width, two-column layout using CSS Grid for a modern, international look.
-// - **Sticky Left Column:** On large screens, the left column containing the title, categories, and main image becomes sticky, staying visible as the user scrolls through the article.
-// - **Refactored Header:** The old centered header has been broken down and its elements (title, categories, author info) are now logically placed within the new layout.
-// - **Full-Width Container:** The main container now uses `max-w-screen-xl` instead of `max-w-3xl`, utilizing more screen space for a premium feel.
-// - **Responsive Stacking:** On mobile devices (`lg:` breakpoint and below), the layout naturally stacks into a single, readable column with the title and image appearing before the article content.
-// - **Portable Text Styles Updated:** The styles for headings in `portableTextComponents` have been slightly adjusted to better fit the new `prose` container.

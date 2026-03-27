@@ -946,7 +946,7 @@ export default function ProductListingClient({
             {showSkeletons ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
                     {[...Array(15)].map((_, i) => (
-                        <div key={i} className="h-[350px]"> 
+                        <div key={i} className="h-87.5"> 
                             <ProductCardSkeleton />
                         </div>
                     ))}

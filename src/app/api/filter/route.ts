@@ -1,7 +1,8 @@
 
 // /src/app/api/filter/route.ts
 
-import { searchProducts } from "@/sanity/lib/queries";
+import { getPayloadProducts } from "@/sanity/lib/payload/plp";
+// import { searchProducts } from "@/sanity/lib/queries";
 import { NextRequest, NextResponse } from "next/server";
 
 interface FilterRequestBody {
@@ -58,7 +59,10 @@ export async function POST(request: NextRequest) {
       page: body.page || 1,
     };
 
-    const results = await searchProducts(options);
+    // const results = await searchProducts(options);
+    // ✅ Switch to Payload Query Engine
+    const results = await getPayloadProducts(options);
+
     return NextResponse.json(results);
 
   } catch (error) {

@@ -1,25 +1,35 @@
 
-// /src/app/faq/page.tsx
+// // /src/app/faq/page.tsx
 
-import { client } from "@/sanity/lib/client";
-import { GET_FAQ_QUERY, getBreadcrumbs } from "@/sanity/lib/queries";
-import type { FaqPage } from "@/sanity/types/product_types";
+import type { Metadata } from "next";
+
+// ✅ NEW PAYLOAD IMPORTS
+import { getPayloadFaqPage } from "@/sanity/lib/payload/content.queries";
+import { getPayloadBreadcrumbs } from "@/sanity/lib/payload/category.queries";
+
 import FaqAccordion from "@/app/(main)/faq/FaqAccordion";
 import { HelpCircle } from "lucide-react";
 import { generateBaseMetadata } from "@/utils/metadata";
-import type { Metadata } from "next";
 import Breadcrumbs from "@/app/components/ui/Breadcrumbs";
+import { FaqItem } from "@/sanity/types/product_types";
 
-type FaqPageData = FaqPage & {
+// 🔥 FIX: Interface ab yahan file mein hi define hai
+interface FaqPageData {
+  _id: string;
+  title: string;
+  subtitle?: string | null; // ✅ Subtitle add kar diya
+  faqList: FaqItem[];
   seo?: {
     metaTitle?: string;
     metaDescription?: string;
     ogImage?: any;
   };
-};
+}
 
 export async function generateMetadata(): Promise<Metadata> {
-  const faqData = await client.fetch<FaqPageData | null>(GET_FAQ_QUERY);
+  // ✅ Switch to Payload & Cast Type
+  const faqData = await getPayloadFaqPage() as FaqPageData | null;
+
   const description =
     faqData?.seo?.metaDescription ||
     "Find answers to frequently asked questions about orders, shipping, returns, and more.";
@@ -44,8 +54,9 @@ function portableTextToString(blocks: any[]): string {
 
 export default async function Faq() {
   const [faqData, breadcrumbs] = await Promise.all([
-    client.fetch<FaqPageData>(GET_FAQ_QUERY),
-    getBreadcrumbs("faq"),
+    // ✅ Switch to Payload & Cast Type
+    getPayloadFaqPage() as Promise<FaqPageData | null>,
+    getPayloadBreadcrumbs("faq"),
   ]);
 
   if (!faqData || !faqData.faqList) {
@@ -55,9 +66,7 @@ export default async function Faq() {
           <HelpCircle size={48} className="mx-auto text-gray-400" />
           <h1 className="mt-4 text-4xl font-bold">FAQs Not Found</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {/* ✅ FIX: 'couldn't' -> 'couldn&apos;t' */}
-            We couldn&apos;t load the questions right now. Please check back
-            later.
+            We couldn&apos;t load the questions right now. Please check back later.
           </p>
         </div>
       </main>
@@ -89,11 +98,13 @@ export default async function Faq() {
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">
               {faqData.title}
             </h1>
-            <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300">
-              {/* ✅ FIX: 'We're' -> 'We&apos;re' */}
-              Have a question? We&apos;re here to help. Find answers to common
-              questions below.
-            </p>
+            
+            {/* 🔥 NEW: Subtitle Display */}
+            {faqData.subtitle && (
+              <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-400 font-medium">
+                {faqData.subtitle}
+              </p>
+            )}
           </div>
         </div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">

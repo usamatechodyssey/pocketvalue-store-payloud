@@ -1,23 +1,26 @@
-// app/actions/returnAction
+
+
 "use server";
 
 import { auth } from "@/app/auth";
 import { revalidatePath } from "next/cache";
 import nodemailer from "nodemailer";
+import { getPayload } from "payload";
+import configPromise from "@payload-config";
 import connectMongoose from "@/app/lib/mongoose";
 import Order from "@/models/Order";
 import ReturnRequest, { IReturnRequest } from "@/models/ReturnRequest";
 import { createReturnRequestReceivedEmail } from "@/email_templates/returnRequestReceivedEmail";
 import { createReturnRequestAdminNotificationEmail } from "@/email_templates/returnRequestAdminNotificationEmail";
-import SanityProduct from "@/sanity/types/product_types";
-import { getProductsByIds } from "@/sanity/lib/queries";
-import { Types } from "mongoose";
-// === THE FIX IS HERE: Import Zod and our new schema ===
-import { z } from "zod";
-import { CreateReturnRequestSchema } from "@/app/lib/zodSchemas"
-// --- Type Definitions ---
 
-// Client-side ke liye saada (plain) object types
+// ✅ PAYLOAD Native Mapping Imports
+import { mapPayloadProductToSanity } from "@/sanity/lib/payload/plp/productMapper";
+import SanityProduct from "@/sanity/types/product_types";
+
+import { Types } from "mongoose";
+import { CreateReturnRequestSchema } from "@/app/lib/zodSchemas";
+
+// --- TYPES (DTOs for Frontend) ---
 export type UserReturnRequest = {
   _id: string;
   orderNumber: string;
@@ -47,31 +50,24 @@ interface CreateReturnRequestResult {
   message: string;
 }
 
-
+// === ACTION #1: CREATE RETURN REQUEST (MUKAMMAL LOGIC) ===
 export async function createReturnRequestAction(formData: FormData): Promise<CreateReturnRequestResult> {
   const session = await auth();
   if (!session?.user?.id || !session.user.name || !session.user.email) {
     return { success: false, message: "You must be logged in to request a return." };
   }
 
-  // --- Step 1: Validate with Zod ---
-  // Convert FormData to a plain object for Zod
   const formObject = Object.fromEntries(formData.entries());
   const validatedFields = CreateReturnRequestSchema.safeParse(formObject);
 
   if (!validatedFields.success) {
-      return {
-          success: false,
-          message: validatedFields.error.issues[0].message,
-      };
+      return { success: false, message: validatedFields.error.issues[0].message };
   }
-  // Use the clean, validated, and parsed data from here
+  
   const { orderId, orderNumber, items, customerComments } = validatedFields.data;
 
   try {
     await connectMongoose();
-    
-    // The old manual 'if' checks are no longer needed.
     
     const order = await Order.findOne({ 
       _id: orderId,
@@ -86,20 +82,20 @@ export async function createReturnRequestAction(formData: FormData): Promise<Cre
       orderId: order._id,
       orderNumber,
       userId: session.user.id,
-      items, // Pass the validated and parsed items array directly
+      items, 
       customerComments,
     });
 
     await newReturnRequest.save();
 
-    // --- CODE HARDENING FIX IS HERE ---
+    // --- NODEMAILER EMAIL LOGIC ---
     try {
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST!, port: Number(process.env.SMTP_PORT!),
             auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! },
         });
 
-        // Email #1: Send to the user
+        // Email #1: To Customer
         const customerEmailHtml = createReturnRequestReceivedEmail({
             customerName: session.user.name,
             orderNumber: orderNumber,
@@ -112,7 +108,7 @@ export async function createReturnRequestAction(formData: FormData): Promise<Cre
             html: customerEmailHtml,
         });
 
-        // Email #2: Send to the admin (with a safety check)
+        // Email #2: To Admin
         if (process.env.ADMIN_EMAIL) {
             const adminEmailHtml = createReturnRequestAdminNotificationEmail({
                 customerName: session.user.name,
@@ -126,44 +122,33 @@ export async function createReturnRequestAction(formData: FormData): Promise<Cre
                 subject: `[New Return Request] Order ${orderNumber}`,
                 html: adminEmailHtml,
             });
-        } else {
-            console.warn(`WARNING: ADMIN_EMAIL environment variable is not set. Could not send new return request notification for ${newReturnRequest._id}.`);
         }
-
     } catch (emailError) {
-        console.error(`CRITICAL: Return request ${newReturnRequest._id} created, but FAILED to send notification emails:`, emailError);
+        console.error(`Email Error for return ${newReturnRequest._id}:`, emailError);
     }
 
     revalidatePath(`/account/orders/${orderId}`);
-    revalidatePath('/Bismillah786/returns');
+    revalidatePath('/account/returns');
 
     return { success: true, message: "Your return request has been submitted successfully." };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating return request:", error);
-    const message = error instanceof Error ? error.message : "An unknown server error occurred.";
-    return { success: false, message };
+    return { success: false, message: error.message || "Server Error" };
   }
 }
 
-// === NAYA ACTION #1: GET USER'S RETURN REQUESTS (REFACTORED WITH FIX) ===
+// === ACTION #2: GET USER'S RETURN REQUESTS ===
 export async function getUserReturnRequests(): Promise<UserReturnRequest[]> {
   const session = await auth();
-  if (!session?.user?.id) {
-    return [];
-  }
+  if (!session?.user?.id) return [];
 
   try {
     await connectMongoose();
     
-    type ReturnRequestLean = Omit<IReturnRequest, '_id'> & { 
-        _id: Types.ObjectId; 
-        createdAt: Date; 
-    };
-    
     const requests = await ReturnRequest.find({ userId: session.user.id })
       .sort({ createdAt: -1 })
-      .lean<ReturnRequestLean[]>();
+      .lean<any[]>();
 
     return requests.map(req => ({
       _id: req._id.toString(),
@@ -173,39 +158,49 @@ export async function getUserReturnRequests(): Promise<UserReturnRequest[]> {
     }));
 
   } catch (error) {
-    console.error("Error fetching user's return requests:", error);
+    console.error("Error fetching returns:", error);
     return [];
   }
 }
 
-
-
-// === NAYA ACTION #2: GET SINGLE USER RETURN REQUEST (DETAIL PAGE KE LIYE) ===
+// === ACTION #3: GET SINGLE RETURN DETAIL (PAYLOAD SYNCED) ===
 export async function getSingleUserReturnRequest(returnId: string): Promise<FullUserReturnRequest | null> {
   const session = await auth();
-  if (!session?.user?.id) {
-    return null;
-  }
+  if (!session?.user?.id) return null;
 
   try {
+    const payload = await getPayload({ config: configPromise });
     await connectMongoose();
 
-    type ReturnRequestLean = Omit<IReturnRequest, '_id'> & { _id: Types.ObjectId; createdAt: Date; };
-    
     const request = await ReturnRequest.findOne({
       _id: returnId,
       userId: session.user.id
-    }).lean<ReturnRequestLean>();
+    }).lean<any>();
 
-    if (!request) {
-      return null;
+    if (!request) return null;
+
+    // ✅ PAYLOAD LOGIC: Fetch items info from Payload
+    const productIds = request.items.map((item: any) => item.productId);
+    
+    // Sirf valid MongoDB IDs fetch karenge taake crash na ho
+    const validProductIds = productIds.filter((id: string) => /^[0-9a-fA-F]{24}$/.test(id));
+
+    let productsMap = new Map<string, SanityProduct>();
+
+    if (validProductIds.length > 0) {
+        const payloadProducts = await payload.find({
+            collection: 'products',
+            where: { id: { in: validProductIds } },
+            depth: 2,
+            limit: 100
+        });
+
+        payloadProducts.docs.forEach((doc: any) => {
+            productsMap.set(doc.id, mapPayloadProductToSanity(doc));
+        });
     }
 
-    const productIdsInRequest = request.items.map(item => item.productId);
-    const sanityProducts = await getProductsByIds(productIdsInRequest);
-    const productsMap = new Map<string, SanityProduct>(sanityProducts.map((p: { _id: any; }) => [p._id, p]));
-
-    const finalResult: FullUserReturnRequest = {
+    return {
       _id: request._id.toString(),
       orderNumber: request.orderNumber,
       status: request.status,
@@ -213,15 +208,13 @@ export async function getSingleUserReturnRequest(returnId: string): Promise<Full
       adminComments: request.adminComments,
       customerComments: request.customerComments,
       createdAt: request.createdAt.toISOString(),
-      items: request.items.map(item => ({
+      items: request.items.map((item: any) => ({
         ...item,
         productDetails: productsMap.get(item.productId) || null,
       })),
     };
-
-    return finalResult;
   } catch (error) {
-    console.error("Error fetching single user return request:", error);
+    console.error("Error fetching return details:", error);
     return null;
   }
 }

@@ -1,66 +1,91 @@
-// /src/app/sitemap.ts
+import { MetadataRoute } from "next";
+import { getPayload } from "payload";
+import configPromise from "@payload-config";
+import { client as sanityClient } from "@/sanity/lib/client";
+import groq from "groq";
 
-import { MetadataRoute } from 'next';
-import { client } from '@/sanity/lib/client';
-import groq from 'groq';
-
-interface SitemapEntry {
-  slug: string;
-  _updatedAt: string;
-}
-
-/**
- * Dynamically generates the sitemap.xml file.
- * This function fetches all public document types (products, categories, posts)
- * from Sanity and constructs a sitemap compliant with the sitemap protocol.
- */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+  const payload = await getPayload({ config: configPromise });
 
-  if (!baseUrl) {
-    throw new Error("Missing NEXT_PUBLIC_BASE_URL environment variable. It's required for a production sitemap.");
-  }
+  // 1. Fetch from Payload (Products, Categories, Campaigns, AND Informational Pages)
+  const [products, categories, campaigns, infoPages] = await Promise.all([
+    payload.find({
+      collection: "products",
+      limit: 1000,
+      select: { slug: true, updatedAt: true },
+    }),
+    payload.find({
+      collection: "categories",
+      limit: 500,
+      select: { slug: true, updatedAt: true },
+    }),
+    payload.find({
+      collection: "campaigns",
+      where: { isActive: { equals: true } },
+      select: { slug: true, updatedAt: true },
+    }),
+    // ✅ NEW: Footer/Informational Pages fetch karein
+    payload.find({
+      collection: "pages",
+      limit: 100,
+      select: { slug: true, updatedAt: true },
+    }),
+  ]);
 
-  // Define GROQ queries to fetch only the necessary fields for the sitemap.
-  const productsQuery: Promise<SitemapEntry[]> = client.fetch(groq`*[_type == "product" && defined(slug.current)]{"slug": slug.current, _updatedAt}`);
-  const categoriesQuery: Promise<SitemapEntry[]> = client.fetch(groq`*[_type == "category" && defined(slug.current)]{"slug": slug.current, _updatedAt}`);
-  const postsQuery: Promise<SitemapEntry[]> = client.fetch(groq`*[_type == "post" && defined(slug.current)]{"slug": slug.current, _updatedAt}`);
-  
-  // Fetch all data concurrently for better performance.
-  const [products, categories, posts] = await Promise.all([productsQuery, categoriesQuery, postsQuery]);
+  // 2. Fetch from Sanity (Blogs/Posts)
+  const posts = await sanityClient.fetch(
+    groq`*[_type == "post" && defined(slug.current)]{ "slug": slug.current, _updatedAt }`,
+  );
 
-  // Map the fetched data into the sitemap URL format.
-  const productUrls = products.map(product => ({
-    url: `${baseUrl}/product/${product.slug}`,
-    lastModified: new Date(product._updatedAt),
-    changeFrequency: 'weekly' as const,
+  // --- Mapping Data to Sitemap Format ---
+
+  // Products
+  const productUrls = products.docs.map((p) => ({
+    url: `${baseUrl}/product/${p.slug}`,
+    lastModified: new Date(p.updatedAt),
     priority: 0.8,
   }));
 
-  const categoryUrls = categories.map(category => ({
-    url: `${baseUrl}/category/${category.slug}`,
-    lastModified: new Date(category._updatedAt),
-    changeFrequency: 'weekly' as const,
+  // Categories
+  const categoryUrls = categories.docs.map((c) => ({
+    url: `${baseUrl}/category/${c.slug}`,
+    lastModified: new Date(c.updatedAt),
     priority: 0.7,
   }));
 
-  const postUrls = posts.map(post => ({
+  // Deals/Campaigns
+  const dealUrls = campaigns.docs.map((d) => ({
+    url: `${baseUrl}/deals/${d.slug}`,
+    lastModified: new Date(d.updatedAt),
+    priority: 0.9,
+  }));
+
+  // ✅ NEW: Informational Pages (About Us, Terms, etc.)
+  const infoPageUrls = infoPages.docs.map((page) => ({
+    url: `${baseUrl}/${page.slug}`,
+    lastModified: new Date(page.updatedAt),
+    priority: 0.5, // Legal pages ki priority thodi kam rakhte hain
+  }));
+
+  // Blogs
+  const blogUrls = posts.map((post: any) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: new Date(post._updatedAt),
-    changeFrequency: 'monthly' as const,
     priority: 0.6,
   }));
 
-  // Combine all URLs, starting with the static homepage.
+  // 3. Combine Everything
   return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1.0,
-    },
+    { url: baseUrl, lastModified: new Date(), priority: 1.0 }, // Homepage
+    { url: `${baseUrl}/deals`, lastModified: new Date(), priority: 0.9 },
+    { url: `${baseUrl}/blog`, lastModified: new Date(), priority: 0.7 },
+    { url: `${baseUrl}/contact-us`, lastModified: new Date(), priority: 0.5 },
+    { url: `${baseUrl}/faq`, lastModified: new Date(), priority: 0.5 },
+    ...dealUrls,
     ...productUrls,
     ...categoryUrls,
-    ...postUrls,
+    ...blogUrls,
+    ...infoPageUrls, // ✅ Footer pages ab sitemap mein hain!
   ];
 }

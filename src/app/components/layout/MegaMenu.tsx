@@ -272,7 +272,7 @@ export default function MegaMenu({ category }: { category: SanityCategory | null
           animate="visible"
           exit="exit"
           // Increased width and added glassmorphism
-          className="h-full w-[85vw] max-w-[1400px] bg-white/98 dark:bg-gray-900/98 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 shadow-[20px_0_50px_rgba(0,0,0,0.1)] z-20 overflow-hidden"
+          className="h-full w-[85vw] max-w-350 bg-white/98 dark:bg-gray-900/98 backdrop-blur-xl border-r border-gray-200 dark:border-gray-800 shadow-[20px_0_50px_rgba(0,0,0,0.1)] z-20 overflow-hidden"
         >
           <div className="h-full overflow-y-auto p-8 lg:p-12 custom-scrollbar">
             

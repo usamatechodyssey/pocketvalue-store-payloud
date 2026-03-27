@@ -205,7 +205,7 @@ export default function ReviewsSection({
           </div>
 
           {/* 4. REVIEWS LIST */}
-          <div className="min-h-[200px]">
+          <div className="min-h-50">
             {paginatedReviews.length > 0 ? (
               <motion.div 
                  initial={{ opacity: 0 }} 

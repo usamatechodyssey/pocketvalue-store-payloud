@@ -18,9 +18,7 @@ import { useRef, useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination, EffectFade } from "swiper/modules";
 import { Swiper as SwiperType } from "swiper";
-import "swiper/css";
-import "swiper/css/pagination";
-import "swiper/css/effect-fade";
+
 
 interface ProductCardProps {
   product: SanityProduct;

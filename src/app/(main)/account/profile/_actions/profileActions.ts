@@ -11,9 +11,6 @@ import User from "@/models/User";
 import { z } from "zod";
 import { UpdateNameSchema, UpdatePasswordSchema } from "@/app/lib/zodSchemas";
 
-// We no longer need the old TypeScript interfaces
-// interface UpdateProfileData { ... }
-// interface UpdatePasswordData { ... }
 
 interface ServerResponse {
   success: boolean;

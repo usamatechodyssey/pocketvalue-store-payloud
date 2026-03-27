@@ -214,6 +214,7 @@ interface ProductHeaderProps {
   averageRating: number;
   totalReviews: number;
   isSelectionInStock: boolean;
+  lowStockThreshold: number; // ✅ NEW PROP
 }
 
 export default function ProductHeader({
@@ -222,6 +223,7 @@ export default function ProductHeader({
   averageRating,
   totalReviews,
   isSelectionInStock,
+  lowStockThreshold, // ✅ NEW PROP
 }: ProductHeaderProps) {
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
 
@@ -235,7 +237,7 @@ export default function ProductHeader({
 
   // Logic for Stock Urgency
   const stockCount = selectedVariant?.stock;
-  const isLowStock = isSelectionInStock && stockCount !== undefined && stockCount > 0 && stockCount <= 5;
+  const isLowStock = isSelectionInStock && stockCount !== undefined && stockCount > 0 && stockCount <= lowStockThreshold;
 
   return (
     <div className="flex flex-col gap-3 mb-6">

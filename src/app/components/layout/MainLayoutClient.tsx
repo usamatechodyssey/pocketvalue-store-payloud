@@ -1328,28 +1328,15 @@ export default function MainLayoutClient({
       {/* === MAIN CONTENT AREA === */}
       <div className="relative flex flex-col min-h-screen w-full">
         
-        {/* 
-            🔥 FIX APPLIED HERE:
-            - Removed inline style={{ paddingTop }}
-            - Used Tailwind Classes for Responsive Padding
-            
-            Explanation:
-            UNSCROLLED:
-            - Mobile: 18 (Top) + 70 (Header) = pt-[88px]
-            - Desktop: 18 (Top) + 87 (Header) + 40 (SecNav) = lg:pt-[145px]
-            
-            SCROLLED:
-            - Mobile: 70 (Header only) = pt-[70px]
-            - Desktop: 87 (Header only) = lg:pt-[87px]
-        */}
+        
         <main
           className={`
             grow w-full
             transition-[padding-top] duration-300 ease-out will-change-[padding-top]
             lg:pl-16 lg:pr-16 md:pb-0 pb-[calc(70px+env(safe-area-inset-bottom))]
             ${isScrolled 
-                ? "pt-[70px] lg:pt-[87px]" 
-                : "pt-[88px] lg:pt-[145px]"
+                ? "pt-17.5 lg:pt-21.75" 
+                : "pt-22 lg:pt-36.25"
             }
           `}
         >

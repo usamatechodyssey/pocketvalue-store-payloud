@@ -93,7 +93,7 @@ export default function ProductCarousel({
 
   return (
     <section className="w-full py-10 md:py-12 bg-white dark:bg-gray-950">
-      <div className="max-w-[1920px] mx-auto">
+      <div className="max-w-480 mx-auto">
         <div className="px-4 md:px-8">
           {!hideHeader && title && (
             <div className="flex items-end justify-between mb-8 gap-4">
@@ -112,7 +112,7 @@ export default function ProductCarousel({
 
         <div className="flex flex-col xl:flex-row items-stretch">
           {banner && banner.bannerImage && (
-            <div className="hidden xl:block shrink-0 w-[280px] relative group overflow-hidden z-20">
+            <div className="hidden xl:block shrink-0 w-70 relative group overflow-hidden z-20">
               <Link href={banner.link || "#"} className="block w-full h-full relative">
                 <Image 
                   src={urlFor(banner.bannerImage).url()} 
@@ -135,7 +135,7 @@ export default function ProductCarousel({
                     keen-slider__slide h-full px-1
                     min-w-[50%] max-w-[50%]                 
                     md:min-w-[33.333%] md:max-w-[33.333%]   
-                    lg:min-w-[220px] lg:max-w-[280px]       
+                    lg:min-w-55 lg:max-w-70       
                   `}
                 >
                   {!loaded ? (

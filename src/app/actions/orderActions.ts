@@ -1,8 +1,7 @@
-// /src/app/actions/orderActions.ts (REFACTORED WITH ZOD)
-
+//ordersActions.ts
 "use server";
 
-import { auth } from "@/app/auth";
+
 import { revalidatePath } from "next/cache";
 import connectMongoose from "@/app/lib/mongoose";
 import Order, { IOrder } from "@/models/Order";
@@ -12,9 +11,9 @@ import { UpdateOrderStatusSchema, SendCustomEmailSchema, CancelOrderSchema } fro
 
 import { createCustomAdminEmailHtml } from '@/email_templates/CustomAdminEmail';
 import { createOrderShippedHtml, createOrderProcessingHtml, createOrderDeliveredHtml, createOrderCancelledHtml } from '@/email_templates/orderStatusEmails';
-// === THE DTO (Data Transfer Object) PATTERN IS HERE ===
+import { verifyStaff } from "@/lib/payloadAuth";
 
-// This is a plain, serializable type for a single product within an order.
+// --- TYPES (Keeping them 100% same for Frontend Compatibility) ---
 export type ClientOrderProduct = {
   _id: string;
   cartItemId: string;
@@ -22,35 +21,25 @@ export type ClientOrderProduct = {
   price: number;
   quantity: number;
   slug: string;
-  image: any; // Sanity image object is serializable
-  variant?: {
-    _key: string;
-    name: string;
-  }
+  image: any;
+  variant?: { _key: string; name: string; }
 };
 
-// This is a plain, serializable type for an entire order, SAFE for client components.
 export type ClientOrder = {
-  _id: string; // The MongoDB ObjectId as a string
-  orderId: string; // The human-readable ID like "PV-1001"
+  _id: string;
+  orderId: string;
   userId: string;
   totalPrice: number;
   status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled' | 'On Hold';
-  createdAt: string; // Date converted to ISO string
+  createdAt: string;
   products: ClientOrderProduct[];
-  shippingAddress: IOrder['shippingAddress']; // Shipping address is already a plain object
+  shippingAddress: IOrder['shippingAddress'];
   paymentMethod: string;
   paymentStatus: 'Paid' | 'Unpaid' | 'Refunded';
   subtotal: number;
   shippingCost: number;
 };
 
-// =======================================================
-
-interface ServerResponse {
-  success: boolean;
-  message: string;
-}
 
 interface GetPaginatedOrdersParams {
   page?: number;
@@ -59,16 +48,6 @@ interface GetPaginatedOrdersParams {
   searchTerm?: string;
   userId?: string | null;
 }
-
-async function verifyAdmin(allowedRoles: string[]): Promise<string> {
-    const session = await auth();
-    const userRole = session?.user?.role;
-    if (!userRole || !allowedRoles.includes(userRole)) {
-        throw new Error("Permission Denied: You do not have access to perform this action.");
-    }
-    return userRole;
-}
-
 
 // --- Helper for generating email content ---
 function getEmailDetailsForStatus(status: string, customerName: string, orderId: string) {
@@ -81,11 +60,15 @@ function getEmailDetailsForStatus(status: string, customerName: string, orderId:
     }
 }
 
-// === ACTION #1: GET PAGINATED ORDERS (Updated to return ClientOrder[]) ===
+
+// === ACTION #1: GET PAGINATED ORDERS ===
 export async function getPaginatedOrders({ 
     page = 1, limit = 10, status = 'all', searchTerm = '', userId = null
 }: GetPaginatedOrdersParams): Promise<{ orders: ClientOrder[], totalPages: number }> {
   try {
+    // 🛡️ SECURITY LOCK: Any staff member can view the order list
+    await verifyStaff(['admin', 'manager', 'editor']);
+
     await connectMongoose();
     const skip = (page - 1) * limit;
 
@@ -103,17 +86,10 @@ export async function getPaginatedOrders({
     }
     
     const [ordersData, totalOrders] = await Promise.all([
-        Order.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean<IOrder[]>(), // Get Mongoose objects
+        Order.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean<IOrder[]>(),
         Order.countDocuments(query)
     ]);
 
-    const totalPages = Math.ceil(totalOrders / limit);
-    
-    // Manually convert Mongoose objects to plain ClientOrder objects
     const clientOrders: ClientOrder[] = ordersData.map(order => ({
         _id: order._id.toString(),
         orderId: order.orderId,
@@ -138,25 +114,24 @@ export async function getPaginatedOrders({
         shippingCost: order.shippingCost,
     }));
 
-    return { orders: clientOrders, totalPages };
-
+    return { orders: clientOrders, totalPages: Math.ceil(totalOrders / limit) };
   } catch (error) {
     console.error("Failed to fetch paginated orders:", error);
     return { orders: [], totalPages: 0 };
   }
 }
 
-// === ACTION #2: UPDATE ORDER STATUS (Refactored with Zod) ===
-export async function updateOrderStatus(orderId: string, newStatus: string): Promise<ServerResponse> {
+
+// === ACTION #2: UPDATE ORDER STATUS (FIXED) ===
+export async function updateOrderStatus(orderId: string, newStatus: string): Promise<{ success: boolean; message: string }> {
+     // 🛡️ SECURITY LOCK: Status update is sensitive, restricted to Admin and Manager
+    await verifyStaff(['admin', 'manager']);
     const validation = UpdateOrderStatusSchema.safeParse({ orderId, newStatus });
-    if (!validation.success) {
-        return { success: false, message: validation.error.issues[0].message };
-    }
-    // Use validated data from here
+    if (!validation.success) return { success: false, message: validation.error.issues[0].message };
+
     const { orderId: validatedOrderId, newStatus: validatedNewStatus } = validation.data;
 
     try {
-        await verifyAdmin(['Super Admin', 'Store Manager']);
         await connectMongoose();
 
         const order = await Order.findById(validatedOrderId);
@@ -166,99 +141,86 @@ export async function updateOrderStatus(orderId: string, newStatus: string): Pro
         order.status = validatedNewStatus;
         await order.save();
         
+        // Email logic
         const user = await User.findById(order.userId);
-        if (user && user.email) {
+        if (user?.email) {
             const { subject, html } = getEmailDetailsForStatus(validatedNewStatus, user.name, order.orderId);
             if (subject && html) {
                 try {
                     const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST!, port: Number(process.env.SMTP_PORT!), auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! } });
-                    const fromEmail = `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`;
-                    await transporter.sendMail({ from: fromEmail, to: user.email, subject, html });
-                } catch (emailError) {
-                    console.error(`CRITICAL: DB status for order ${validatedOrderId} updated, but FAILED to send email:`, emailError);
-                }
+                    await transporter.sendMail({ from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`, to: user.email, subject, html });
+                } catch (e) { console.error("Email Error:", e); }
             }
         }
         
-        revalidatePath(`/Bismillah786/orders`);
-        revalidatePath(`/Bismillah786/orders/${validatedOrderId}`);
+        // ✅ REVALIDATION (Crucial Fix)
+        revalidatePath(`/admin/orders`);
+        revalidatePath(`/admin/orders/${validatedOrderId}`);
         revalidatePath(`/account/orders`);
-        revalidatePath(`/account/orders/${validatedOrderId}`);
-        revalidatePath(`/Bismillah786/users/${order.userId}`);
         
         return { success: true, message: "Order status updated successfully!" };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : "An unknown error occurred.";
-        return { success: false, message };
+    } catch (error: any) {
+        return { success: false, message: error.message };
     }
 }
 
-// === ACTION #3: SEND CUSTOM EMAIL (Refactored with Zod) ===
-export async function sendCustomEmail(customerId: string, subject: string, message: string): Promise<ServerResponse> {
+// === ACTION #3: SEND CUSTOM EMAIL ===
+export async function sendCustomEmail(customerId: string, subject: string, message: string) {
+   // 🛡️ SECURITY LOCK: Admin and Manager only
+    await verifyStaff(['admin', 'manager']);
     const validation = SendCustomEmailSchema.safeParse({ customerId, subject, message });
-    if (!validation.success) {
-        return { success: false, message: validation.error.issues[0].message };
-    }
-    const { customerId: validatedCustomerId, subject: validatedSubject, message: validatedMessage } = validation.data;
+    if (!validation.success) return { success: false, message: validation.error.issues[0].message };
 
     try {
-        await verifyAdmin(['Super Admin', 'Store Manager']);
         await connectMongoose();
-
-        const user = await User.findById(validatedCustomerId);
-        if (!user || !user.email) return { success: false, message: "Customer email not found." };
+        const user = await User.findById(validation.data.customerId);
+        if (!user?.email) return { success: false, message: "Customer email not found." };
 
         const transporter = nodemailer.createTransport({ host: process.env.SMTP_HOST!, port: Number(process.env.SMTP_PORT!), auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! } });
-        const emailHtml = createCustomAdminEmailHtml({ customerName: user.name, message: validatedMessage });
-        const fromEmail = `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`;
-        await transporter.sendMail({ from: fromEmail, to: user.email, subject: validatedSubject, html: emailHtml });
+        const emailHtml = createCustomAdminEmailHtml({ customerName: user.name, message: validation.data.message });
+        await transporter.sendMail({ from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`, to: user.email, subject: validation.data.subject, html: emailHtml });
         
         return { success: true, message: "Email sent successfully!" };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        console.error("Send Custom Email Error:", errorMessage);
-        return { success: false, message: "Failed to send email due to a server error." };
+    } catch (error: any) {
+        return { success: false, message: error.message };
     }
 }
 
-// === ACTION #4: CANCEL AN ORDER (Refactored with Zod) ===
-export async function cancelOrderAction(orderId: string): Promise<ServerResponse> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { success: false, message: "Authentication required." };
-  }
-  
+// === ACTION #4: CANCEL AN ORDER ===
+export async function cancelOrderAction(orderId: string) {
+     // 🛡️ SECURITY LOCK: Full cancellation restricted to Super Admin
+  await verifyStaff(['admin']);
   const validation = CancelOrderSchema.safeParse({ orderId });
-  if (!validation.success) {
-      return { success: false, message: validation.error.issues[0].message };
-  }
-  const { orderId: validatedOrderId } = validation.data;
+  if (!validation.success) return { success: false, message: validation.error.issues[0].message };
 
   try {
     await connectMongoose();
     
-    const order = await Order.findOne({
-        _id: validatedOrderId,
-        userId: session.user.id
-    });
-
-    if (!order) {
-        return { success: false, message: "Order not found or you do not have permission to cancel it." };
-    }
-    if (order.status !== "Pending" && order.status !== "On Hold") {
-        return { success: false, message: `This order cannot be cancelled as its status is "${order.status}".` };
-    }
-
+    const order = await Order.findById(validation.data.orderId);
+    if (!order) return { success: false, message: "Order not found." };
+    
     order.status = "Cancelled";
     await order.save();
     
-    revalidatePath(`/account/orders/${validatedOrderId}`);
+    revalidatePath(`/admin/orders`);
     revalidatePath(`/account/orders`);
-
-    return { success: true, message: "Your order has been successfully cancelled." };
-
-  } catch (error) {
-    console.error("Error in cancelOrderAction:", error);
-    return { success: false, message: "An unexpected error occurred." };
+    return { success: true, message: "Order cancelled." };
+  } catch (error: any) {
+    return { success: false, message: error.message };
   }
 }
+
+// === ACTION #5: GET SINGLE ORDER ===
+export async function getSingleOrder(orderId: string): Promise<IOrder | null> {
+    try {
+          // 🛡️ SECURITY LOCK: Staff access required
+        await verifyStaff(['admin', 'manager', 'editor']);
+        await connectMongoose();
+        const order = await Order.findOne({ $or: [{ _id: orderId }, { orderId: orderId }] }).populate("userId", "name email").lean();
+        return order ? JSON.parse(JSON.stringify(order)) : null;
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        return null;
+    }
+}
+

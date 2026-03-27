@@ -1,8 +1,9 @@
 
 import { Suspense } from "react";
-import { client } from "@/sanity/lib/client";
-import { HOMEPAGE_DATA_QUERY } from "@/sanity/lib/queries";
-
+// import { client } from "@/sanity/lib/client";
+// import { HOMEPAGE_DATA_QUERY } from "@/sanity/lib/queries";
+// ✅ NEW PAYLOAD IMPORT
+import { getPayloadHomepageData } from "@/sanity/lib/payload/homepage.queries";
 // Components
 import HeroSection from "../components/home/HeroSection"; 
 import HeroSkeleton from "../components/home/HeroSkeleton";
@@ -21,7 +22,8 @@ export async function generateMetadata(): Promise<Metadata> {
 // === THE CLEANEST PAGE EVER ===
 export default async function Home() {
   // 1. Fetch Only Essential Data
-  const homepageData = await client.fetch(HOMEPAGE_DATA_QUERY);
+  // ✅ Switch: Ab Homepage Data Payload se aayega
+  const homepageData = await getPayloadHomepageData();
   const pageSections = homepageData?.pageSections || [];
 
   return (

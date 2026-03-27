@@ -1,6 +1,7 @@
+// This is the main layout file for the application. It sets up global providers, metadata, and includes the main layout client component. It also integrates the new IntelligenceTracker for enhanced user behavior tracking.
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
-import { Montserrat } from "next/font/google"; 
+import { Montserrat } from "next/font/google";
 import { AppStateProvider } from "../context/StateContext";
 import { Toaster } from "react-hot-toast";
 import AuthProvider from "../providers/AuthProvider";
@@ -11,19 +12,21 @@ import { ThemeProvider } from "next-themes";
 import MainLayoutClient from "../components/layout/MainLayoutClient";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
 
-// ✅ NEW: Import Both Vercel Tools
-import { SpeedInsights } from "@vercel/speed-insights/next"; 
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 
-import {
-  getNavigationCategories,
-  getSearchSuggestions,
-  getGlobalSettings,
-} from "@/sanity/lib/queries";
+// ✅ NEW IMPORTS: Intelligence Tracking
+import { headers } from "next/headers";
+
+import { getPayloadNavigationCategories } from "@/sanity/lib/payload/category.queries";
+import { getPayloadSearchSuggestions } from "@/sanity/lib/payload/settings.queries";
 import { SanityCategory } from "@/sanity/types/product_types";
 import { generateBaseMetadata } from "@/utils/metadata";
 import { urlFor } from "@/sanity/lib/image";
-import NextTopLoader from 'nextjs-toploader';
+import NextTopLoader from "nextjs-toploader";
+import { fetchGlobalSettingsAction } from "../actions/globalSettingsActions";
+// import { trackSessionPulse } from "../actions/trackingActions";
+import IntelligenceTracker from "../components/intelligence/IntelligenceTracker";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -32,6 +35,7 @@ const montserrat = Montserrat({
   display: "swap",
 });
 
+// Viewport & Metadata logic remains exactly the same...
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -45,15 +49,13 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getGlobalSettings();
-
+  const settings = await fetchGlobalSettingsAction();
   const baseSEO = generateBaseMetadata({
     title: settings.seo?.metaTitle,
     description: settings.seo?.metaDescription,
     image: settings.seo?.ogImage,
     path: `/`,
   });
-
   return {
     ...baseSEO,
     manifest: "/manifest.json",
@@ -62,9 +64,7 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: "default",
       title: "PocketValue",
     },
-    formatDetection: {
-      telephone: false,
-    },
+    formatDetection: { telephone: false },
   };
 }
 
@@ -73,14 +73,21 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+ const headerList = await headers();
+const sessionId = headerList.get('x-pv-session-id');
+const visitorId = headerList.get('x-pv-visitor-id'); // 👈 Naya ID
+
+  // // ================================================================
+
   const [categories, searchSuggestions, globalSettings] = await Promise.all([
-    getNavigationCategories() as Promise<SanityCategory[]>,
-    getSearchSuggestions(),
-    getGlobalSettings(),
+    getPayloadNavigationCategories() as Promise<SanityCategory[]>,
+    getPayloadSearchSuggestions(),
+    fetchGlobalSettingsAction(),
   ]);
 
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
 
+  // Schema objects remain the same...
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -122,19 +129,8 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
 
-        <NextTopLoader 
-          color="#f97316"
-          initialPosition={0.08}
-          crawlSpeed={200}
-          height={5}
-          crawl={true}
-          showSpinner={false}
-          easing="ease"
-          speed={200}
-          shadow="0 0 15px #f97316, 0 0 10px #f97316"
-          zIndex={99999}
-        />
-      
+        <NextTopLoader color="#f97316" height={5} showSpinner={false} />
+
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -142,36 +138,33 @@ export default async function RootLayout({
         >
           <AuthProvider>
             <AppStateProvider>
-              <Toaster
-                position="bottom-center"
-                toastOptions={{ duration: 3000 }}
-              />
-              
+              <Toaster position="bottom-center" />
               <PWAInstallPrompt />
-
-              <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-900" />}>
+             <IntelligenceTracker sessionId={sessionId} visitorId={visitorId} />
+              <Suspense
+                fallback={
+                  <div className="min-h-screen bg-gray-50 dark:bg-gray-900" />
+                }
+              >
                 <MainLayoutClient
-                    categories={categories || []}
-                    searchSuggestions={
+                  categories={categories || []}
+                  searchSuggestions={
                     searchSuggestions || {
-                        trendingKeywords: [],
-                        popularCategories: [],
+                      trendingKeywords: [],
+                      popularCategories: [],
                     }
-                    }
-                    globalSettings={globalSettings || {}}
+                  }
+                  globalSettings={globalSettings || {}}
                 >
-                    {children}
+                  {children}
                 </MainLayoutClient>
               </Suspense>
-
             </AppStateProvider>
           </AuthProvider>
         </ThemeProvider>
 
-        {/* ✅ BOTH INSTALLED: Performance & Visitor Tracking */}
         <SpeedInsights />
         <Analytics />
-        
       </body>
     </html>
   );
