@@ -13,6 +13,7 @@ import { generateBaseMetadata } from "@/utils/metadata";
 import Breadcrumbs from "@/app/components/ui/Breadcrumbs";
 import { FaqItem } from "@/sanity/types/product_types";
 
+export const dynamic = 'force-dynamic'; 
 // 🔥 FIX: Interface ab yahan file mein hi define hai
 interface FaqPageData {
   _id: string;

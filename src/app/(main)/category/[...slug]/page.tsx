@@ -16,6 +16,8 @@ import { urlFor } from "@/sanity/lib/image";
 import { FiArrowLeft } from "react-icons/fi";
 import { SanityCategory, SanityBrand } from "@/sanity/types/product_types";
 
+export const dynamic = 'force-dynamic'; 
+
 type CategoryPageProps = {
   params: Promise<{ slug: string[] }>;
 };

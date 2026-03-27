@@ -25,6 +25,8 @@ import {
 } from "@/sanity/lib/payload/product.queries";
 import { getPayloadBreadcrumbs } from "@/sanity/lib/payload/category.queries";
 
+export const dynamic = 'force-dynamic'; 
+
 type ProductDetailPageProps = {
   params: Promise<{ slug: string }>;
 };

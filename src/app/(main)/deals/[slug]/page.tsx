@@ -16,6 +16,8 @@ import { SanityBrand, SanityCategory } from "@/sanity/types/product_types";
 import { getPayloadBreadcrumbs } from "@/sanity/lib/payload/category.queries"; // Breadcrumbs ke liye
 import Breadcrumbs from "@/app/components/ui/Breadcrumbs";
 
+export const dynamic = 'force-dynamic'; 
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };

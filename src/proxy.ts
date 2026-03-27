@@ -154,3 +154,6 @@ export async function proxy(req: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
+
+
+// mongodb+srv://thegamer78678a_db_user:rxPudjIXD1sRzEqQ@cluster0.inxieov.mongodb.net/?appName=Cluster0

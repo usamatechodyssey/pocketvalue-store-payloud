@@ -12,6 +12,7 @@ import { getPayloadPageData } from "@/sanity/lib/payload/content.queries";
 import { getPayloadBreadcrumbs } from "@/sanity/lib/payload/category.queries"; 
 import Breadcrumbs from "@/app/components/ui/Breadcrumbs";
 
+export const dynamic = 'force-dynamic'; 
 // 🔥 FIX: Interface ab use hogi
 interface PageData {
   _id: string;

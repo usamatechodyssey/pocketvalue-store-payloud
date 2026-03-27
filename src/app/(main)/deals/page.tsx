@@ -21,6 +21,8 @@ import ProductListingClient from "@/app/components/category/ProductListingClient
 import Breadcrumbs from "@/app/components/ui/Breadcrumbs";
 import { generateBaseMetadata } from "@/utils/metadata";
 
+export const dynamic = 'force-dynamic'; 
+
 export async function generateMetadata(): Promise<Metadata> {
   return generateBaseMetadata({
     title: "Today's Deals",

@@ -13,6 +13,8 @@ import RenderSection from "../components/home/builder/RenderSection";
 import { generateBaseMetadata } from "@/utils/metadata";
 import type { Metadata } from "next";
 
+export const dynamic = 'force-dynamic'; 
+
 export async function generateMetadata(): Promise<Metadata> {
   return generateBaseMetadata({
     path: "/", 
